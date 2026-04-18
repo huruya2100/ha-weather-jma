@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+  <Control>
+    <PublishingOffice>気象庁</PublishingOffice>
+  </Control>
+  <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+    <ReportDateTime>2026-05-29T01:05:00+09:00</ReportDateTime>
+    <Headline>
+      <Text>土砂災害危険警報のテスト</Text>
+    </Headline>
+  </Head>
+  <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/meteorology1/">
+    <Warning type="気象警報・注意報（市町村等）">
+      <Item>
+        <Kind>
+          <Name>レベル４土砂災害危険警報</Name>
+          <Code>49</Code>
+          <Status>特別警報から危険警報</Status>
+        </Kind>
+        <Area>
+          <Name>千代田区</Name>
+          <Code>1310100</Code>
+        </Area>
+      </Item>
+    </Warning>
+  </Body>
+</Report>

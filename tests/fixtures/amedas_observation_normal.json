@@ -1,0 +1,9 @@
+{
+  "pressure": [1013.8, 0],
+  "temp": [18.1, 0],
+  "humidity": [77, 0],
+  "windDirection": [6, 0],
+  "wind": [3.0, 0],
+  "weatherCode": ["100", 0],
+  "weather": ["晴れ", 0]
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+  <Control>
+    <PublishingOffice>気象庁</PublishingOffice>
+  </Control>
+  <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+    <ReportDateTime>2026-04-14T16:08:00+09:00</ReportDateTime>
+    <Headline>
+      <Text>テスト用のXML警報ヘッドライン</Text>
+    </Headline>
+  </Head>
+  <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/meteorology1/">
+    <Warning type="気象警報・注意報（市町村等）">
+      <Item>
+        <Kind>
+          <Name>濃霧注意報</Name>
+          <Code>20</Code>
+          <Status>発表</Status>
+        </Kind>
+        <Kind>
+          <Name>波浪注意報</Name>
+          <Code>16</Code>
+          <Status>解除</Status>
+        </Kind>
+        <Area>
+          <Name>千代田区</Name>
+          <Code>1310100</Code>
+        </Area>
+      </Item>
+    </Warning>
+  </Body>
+</Report>
