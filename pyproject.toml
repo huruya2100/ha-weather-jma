@@ -1,0 +1,44 @@
+[project]
+name = "ha-weather-jma"
+version = "0.1.0"
+description = "Unofficial Home Assistant custom integration for Japan Meteorological Agency weather data"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "voluptuous>=0.16.0",
+]
+
+[dependency-groups]
+dev = [
+    "aiohttp>=3.13.5",
+    "black>=26.3.1",
+    "isort>=8.0.1",
+    "mypy>=1.20.1",
+    "pytest>=9.0.3",
+    "ruff>=0.15.10",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "live: uses live JMA endpoints over the network",
+]
+
+[tool.ruff]
+target-version = "py313"
+src = ["custom_components", "tests"]
+
+[tool.black]
+target-version = ["py313"]
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+python_version = "3.13"
+
+[[tool.mypy.overrides]]
+module = [
+    "homeassistant",
+    "homeassistant.*",
+]
+ignore_missing_imports = true
