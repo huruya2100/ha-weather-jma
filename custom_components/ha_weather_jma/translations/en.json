@@ -1,0 +1,116 @@
+{
+  "title": "ha-weather-jma",
+  "config": {
+    "abort": {
+      "already_configured": "This forecast area / observation station / warning area combination is already configured."
+    },
+    "error": {
+      "cannot_connect": "Failed to fetch published JMA data.",
+      "invalid_name": "Enter a name.",
+      "invalid_observation_station": "Select an observation station that is available for the chosen forecast area.",
+      "invalid_selection": "Select a valid value from the list.",
+      "invalid_warning_levels": "Select at least one warning level.",
+      "no_matching_candidates": "No candidates matched the filter.",
+      "too_many_matches": "Too many candidates matched. Narrow the filter."
+    },
+    "step": {
+      "user": {
+        "title": "Select region",
+        "data": {
+          "region_query": "Filter by region name or code",
+          "region_code": "Region"
+        }
+      },
+      "forecast_area": {
+        "title": "Select forecast area",
+        "data": {
+          "forecast_area_query": "Filter by area name, code, or office",
+          "forecast_area_code": "Forecast area"
+        }
+      },
+      "observation": {
+        "title": "Select observation station",
+        "data": {
+          "observation_station_query": "Filter by station name or code",
+          "observation_station_code": "Observation station"
+        }
+      },
+      "warning": {
+        "title": "Select warning area",
+        "data": {
+          "warning_area_query": "Filter by area name, code, or office",
+          "warning_area_code": "Warning area"
+        }
+      },
+      "options": {
+        "title": "Finalize settings",
+        "data": {
+          "name": "Name",
+          "update_interval_minutes": "Update interval (minutes)",
+          "enabled_warning_levels": "Generated warning levels",
+          "enabled_entity_groups": "Additional entity groups"
+        }
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "invalid_warning_levels": "Select at least one warning level when warning binary sensors are enabled."
+    },
+    "step": {
+      "init": {
+        "title": "Entity settings",
+        "data": {
+          "update_interval_minutes": "Update interval (minutes)",
+          "enabled_warning_levels": "Generated warning levels",
+          "enabled_entity_groups": "Additional entity groups"
+        }
+      }
+    }
+  },
+  "entity": {
+    "weather": {
+      "weather": {
+        "name": "Weather"
+      }
+    },
+    "sensor": {
+      "forecast_area": {
+        "name": "Forecast area"
+      },
+      "observation_station": {
+        "name": "Observation station"
+      },
+      "report_datetime": {
+        "name": "Report datetime"
+      },
+      "publishing_office": {
+        "name": "Publishing office"
+      },
+      "today_precip_probability": {
+        "name": "Today's precipitation probability"
+      },
+      "tomorrow_precip_probability": {
+        "name": "Tomorrow's precipitation probability"
+      },
+      "alert_summary": {
+        "name": "Alert summary"
+      },
+      "alert_max_level": {
+        "name": "Alert max level",
+        "state": {
+          "none": "None",
+          "advisory": "Advisory",
+          "warning": "Warning",
+          "danger_warning": "Danger warning",
+          "emergency_warning": "Emergency warning"
+        }
+      }
+    },
+    "binary_sensor": {
+      "warning_status": {
+        "name": "{warning_name}"
+      }
+    }
+  }
+}

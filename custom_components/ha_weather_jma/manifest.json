@@ -1,0 +1,13 @@
+{
+  "domain": "ha_weather_jma",
+  "name": "ha-weather-jma",
+  "codeowners": [
+    "@huruya2100"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/huruya2100/ha-weather-jma",
+  "issue_tracker": "https://github.com/huruya2100/ha-weather-jma/issues",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}

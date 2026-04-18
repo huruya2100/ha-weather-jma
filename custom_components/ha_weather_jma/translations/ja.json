@@ -1,0 +1,116 @@
+{
+  "title": "ha-weather-jma",
+  "config": {
+    "abort": {
+      "already_configured": "この予報地域・観測所・警報地域の組み合わせは既に設定済みです。"
+    },
+    "error": {
+      "cannot_connect": "気象庁の公開データを取得できませんでした。",
+      "invalid_name": "名前を入力してください。",
+      "invalid_observation_station": "選択した予報地域で利用できる観測所を選んでください。",
+      "invalid_selection": "候補一覧にある値を選択してください。",
+      "invalid_warning_levels": "警報レベルを1つ以上選択してください。",
+      "no_matching_candidates": "絞り込み条件に一致する候補がありません。",
+      "too_many_matches": "一致する候補が多すぎます。もう少し絞り込んでください。"
+    },
+    "step": {
+      "user": {
+        "title": "地域を選択",
+        "data": {
+          "region_query": "地域名・地域コードで絞り込み",
+          "region_code": "地域"
+        }
+      },
+      "forecast_area": {
+        "title": "予報地域を選択",
+        "data": {
+          "forecast_area_query": "予報地域名・地域コード・気象台名で絞り込み",
+          "forecast_area_code": "予報地域"
+        }
+      },
+      "observation": {
+        "title": "観測所を選択",
+        "data": {
+          "observation_station_query": "観測所名・観測所コードで絞り込み",
+          "observation_station_code": "観測所"
+        }
+      },
+      "warning": {
+        "title": "警報判定地域を選択",
+        "data": {
+          "warning_area_query": "警報地域名・地域コード・気象台名で絞り込み",
+          "warning_area_code": "警報地域"
+        }
+      },
+      "options": {
+        "title": "設定を確定",
+        "data": {
+          "name": "名前",
+          "update_interval_minutes": "更新間隔（分）",
+          "enabled_warning_levels": "生成する警報レベル",
+          "enabled_entity_groups": "追加するエンティティ範囲"
+        }
+      }
+    }
+  },
+  "options": {
+    "error": {
+      "invalid_warning_levels": "警報バイナリセンサーを有効にする場合は、警報レベルを1つ以上選択してください。"
+    },
+    "step": {
+      "init": {
+        "title": "エンティティ設定",
+        "data": {
+          "update_interval_minutes": "更新間隔（分）",
+          "enabled_warning_levels": "生成する警報レベル",
+          "enabled_entity_groups": "追加するエンティティ範囲"
+        }
+      }
+    }
+  },
+  "entity": {
+    "weather": {
+      "weather": {
+        "name": "天気"
+      }
+    },
+    "sensor": {
+      "forecast_area": {
+        "name": "予報対象地域"
+      },
+      "observation_station": {
+        "name": "観測所"
+      },
+      "report_datetime": {
+        "name": "予報発表時刻"
+      },
+      "publishing_office": {
+        "name": "発表官署"
+      },
+      "today_precip_probability": {
+        "name": "今日の降水確率"
+      },
+      "tomorrow_precip_probability": {
+        "name": "明日の降水確率"
+      },
+      "alert_summary": {
+        "name": "警報サマリー"
+      },
+      "alert_max_level": {
+        "name": "最大警戒レベル",
+        "state": {
+          "none": "なし",
+          "advisory": "注意報",
+          "warning": "警報",
+          "danger_warning": "危険警報",
+          "emergency_warning": "特別警報"
+        }
+      }
+    },
+    "binary_sensor": {
+      "warning_status": {
+        "name": "{warning_name}"
+      }
+    }
+  }
+}
