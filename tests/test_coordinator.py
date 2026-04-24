@@ -190,7 +190,31 @@ class CoordinatorTests(unittest.TestCase):
             all(item.is_active is None for item in snapshot.alerts.values())
         )
 
-    def test_all_fetches_fail_raises_update_failed(self) -> None:
+    def test_all_fetches_fail_with_previous_snapshot_reuses_existing_data(self) -> None:
+        coordinator = COORDINATOR.HaWeatherJmaCoordinator(
+            HA_CORE.HomeAssistant(),
+            FakeApiClient(
+                latest_time=ValueError("latest time failed"),
+                observation=LookupError("missing observation"),
+                forecast=ValueError("forecast failed"),
+                warnings=ValueError("warning failed"),
+            ),
+            build_location(),
+        )
+        previous_snapshot = build_previous_snapshot()
+        coordinator.data = previous_snapshot
+
+        snapshot = asyncio.run(coordinator._async_update_data())
+
+        self.assertTrue(snapshot.is_partial)
+        self.assertEqual(snapshot.observation, previous_snapshot.observation)
+        self.assertEqual(snapshot.forecast_days, previous_snapshot.forecast_days)
+        self.assertEqual(snapshot.forecast_meta, previous_snapshot.forecast_meta)
+        self.assertEqual(snapshot.alerts, previous_snapshot.alerts)
+        self.assertEqual(snapshot.alert_summary, previous_snapshot.alert_summary)
+        self.assertEqual(snapshot.last_success_at, previous_snapshot.last_success_at)
+
+    def test_all_fetches_fail_without_previous_snapshot_raises_update_failed(self) -> None:
         coordinator = COORDINATOR.HaWeatherJmaCoordinator(
             HA_CORE.HomeAssistant(),
             FakeApiClient(

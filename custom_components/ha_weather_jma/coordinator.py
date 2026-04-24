@@ -164,7 +164,22 @@ class HaWeatherJmaCoordinator(DataUpdateCoordinator[CoordinatorSnapshot]):
             _LOGGER.warning("Warning fetch returned unexpected payload type")
 
         if observation_failed and forecast_failed and warning_failed:
-            raise UpdateFailed("All JMA data sources failed")
+            if previous is None:
+                raise UpdateFailed("All JMA data sources failed")
+
+            _LOGGER.warning(
+                "All JMA data sources failed; reusing the previous snapshot"
+            )
+            return build_snapshot(
+                location=self.location,
+                observation=previous.observation,
+                forecast_days=previous.forecast_days,
+                forecast_meta=previous.forecast_meta,
+                alerts=previous.alerts,
+                alert_summary=previous.alert_summary,
+                last_success_at=previous.last_success_at,
+                is_partial=True,
+            )
 
         is_partial = observation_failed or forecast_failed or warning_failed
 
