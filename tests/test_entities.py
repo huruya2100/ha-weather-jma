@@ -300,7 +300,9 @@ class EntityTests(unittest.TestCase):
             entity_ids,
         )
 
-    def test_button_platform_adds_force_refresh_button_when_actions_enabled(self) -> None:
+    def test_button_platform_adds_force_refresh_button_when_actions_enabled(
+        self,
+    ) -> None:
         snapshot = build_snapshot(observation=None)
         coordinator = build_coordinator(snapshot)
         hass = types.SimpleNamespace(

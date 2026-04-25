@@ -29,7 +29,6 @@ from .const import (
     CONF_WARNING_AREA_CODE,
     CONF_WARNING_AREA_NAME,
     CONF_WARNING_OFFICE_CODE,
-    DEFAULT_ENABLED_ENTITY_GROUPS,
     LEGACY_DEFAULT_ENABLED_ENTITY_GROUPS,
     DEFAULT_ENABLED_WARNING_LEVELS,
     DEFAULT_UPDATE_INTERVAL_MINUTES,
@@ -404,11 +403,7 @@ def build_location_config(
         else LEGACY_DEFAULT_ENABLED_ENTITY_GROUPS
     )
 
-    entry_slug = (
-        slugify_name(title)
-        or slugify_name(entry_id)
-        or "ha_weather_jma_entry"
-    )
+    entry_slug = slugify_name(title) or slugify_name(entry_id) or "ha_weather_jma_entry"
     return LocationConfig(
         entry_id=entry_id,
         entry_slug=entry_slug,

@@ -215,10 +215,14 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual(snapshot.forecast_meta, previous_snapshot.forecast_meta)
         self.assertEqual(snapshot.alerts, previous_snapshot.alerts)
         self.assertEqual(snapshot.alert_summary, previous_snapshot.alert_summary)
-        self.assertNotEqual(snapshot.last_api_call_at, previous_snapshot.last_api_call_at)
+        self.assertNotEqual(
+            snapshot.last_api_call_at, previous_snapshot.last_api_call_at
+        )
         self.assertEqual(snapshot.last_success_at, previous_snapshot.last_success_at)
 
-    def test_all_fetches_fail_without_previous_snapshot_raises_update_failed(self) -> None:
+    def test_all_fetches_fail_without_previous_snapshot_raises_update_failed(
+        self,
+    ) -> None:
         coordinator = COORDINATOR.HaWeatherJmaCoordinator(
             HA_CORE.HomeAssistant(),
             FakeApiClient(

@@ -463,9 +463,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def _get_api_client(self) -> HaWeatherJmaApiClient:
         if self._api_client is None:
-            self._api_client = HaWeatherJmaApiClient(
-                async_get_clientsession(self.hass)
-            )
+            self._api_client = HaWeatherJmaApiClient(async_get_clientsession(self.hass))
         return self._api_client
 
     async def _async_fetch_forecast_for_validation(self) -> list[dict[str, Any]]:
