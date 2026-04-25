@@ -54,6 +54,12 @@ class ConfigFlowTests(unittest.TestCase):
                 return dict(validator.container)
         raise AssertionError(f"Field {field_name} not found")
 
+    def _schema_default(self, schema, field_name: str):
+        for field in schema.schema:
+            if field.schema == field_name:
+                return field.default()
+        raise AssertionError(f"Field {field_name} not found")
+
     def test_config_flow_allows_selection_steps_and_creates_entry(self) -> None:
         result = asyncio.run(self.flow.async_step_user({"region_code": "010300"}))
         self.assertEqual(result["step_id"], "forecast_area")
@@ -117,6 +123,23 @@ class ConfigFlowTests(unittest.TestCase):
                 "enabled_warning_levels",
                 "enabled_entity_groups",
             },
+        )
+
+    def test_options_step_defaults_to_recommended_entity_groups(self) -> None:
+        self.flow._entry_data = {
+            "forecast_area_name": "東京地方",
+        }
+
+        result = asyncio.run(self.flow.async_step_options())
+
+        self.assertEqual(
+            self._schema_default(result["data_schema"], "enabled_entity_groups"),
+            [
+                "forecast_sensors",
+                "warning_summary",
+                "warning_binary_sensors",
+                "actions",
+            ],
         )
 
     def test_config_flow_allows_disabling_warning_binary_sensors_and_levels(
