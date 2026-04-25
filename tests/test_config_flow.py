@@ -54,6 +54,12 @@ class ConfigFlowTests(unittest.TestCase):
                 return dict(validator.container)
         raise AssertionError(f"Field {field_name} not found")
 
+    def _schema_default(self, schema, field_name: str):
+        for field in schema.schema:
+            if field.schema == field_name:
+                return field.default()
+        raise AssertionError(f"Field {field_name} not found")
+
     def test_config_flow_allows_selection_steps_and_creates_entry(self) -> None:
         result = asyncio.run(self.flow.async_step_user({"region_code": "010300"}))
         self.assertEqual(result["step_id"], "forecast_area")
@@ -80,9 +86,8 @@ class ConfigFlowTests(unittest.TestCase):
                     "update_interval_minutes": 15,
                     "enabled_warning_levels": ["advisory", "warning"],
                     "enabled_entity_groups": [
-                        "forecast_sensors",
-                        "warning_summary",
-                        "warning_binary_sensors",
+                        "weather_forecast",
+                        "warnings",
                     ],
                 }
             )
@@ -98,7 +103,7 @@ class ConfigFlowTests(unittest.TestCase):
         )
         self.assertEqual(
             result["data"]["enabled_entity_groups"],
-            ["forecast_sensors", "warning_summary", "warning_binary_sensors"],
+            ["weather_forecast", "warnings"],
         )
 
     def test_options_step_includes_entity_group_selection(self) -> None:
@@ -119,6 +124,32 @@ class ConfigFlowTests(unittest.TestCase):
             },
         )
 
+    def test_options_step_defaults_to_recommended_entity_groups(self) -> None:
+        self.flow._entry_data = {
+            "forecast_area_name": "東京地方",
+        }
+
+        result = asyncio.run(self.flow.async_step_options())
+
+        self.assertEqual(
+            self._schema_default(result["data_schema"], "enabled_entity_groups"),
+            [
+                "weather_forecast",
+                "warnings",
+                "management",
+            ],
+        )
+
+    def test_options_step_shows_entity_category_labels(self) -> None:
+        self.assertEqual(
+            CONFIG_FLOW.ENTITY_GROUP_LABELS,
+            {
+                "weather_forecast": "天気予報",
+                "warnings": "注意報・警報",
+                "management": "管理ツール",
+            },
+        )
+
     def test_config_flow_allows_disabling_warning_binary_sensors_and_levels(
         self,
     ) -> None:
@@ -134,7 +165,7 @@ class ConfigFlowTests(unittest.TestCase):
                     "name": "東京",
                     "update_interval_minutes": 10,
                     "enabled_warning_levels": [],
-                    "enabled_entity_groups": ["forecast_sensors"],
+                    "enabled_entity_groups": ["weather_forecast"],
                 }
             )
         )
@@ -226,9 +257,8 @@ class ConfigFlowTests(unittest.TestCase):
                         "update_interval_minutes": 10,
                         "enabled_warning_levels": ["advisory", "warning"],
                         "enabled_entity_groups": [
-                            "forecast_sensors",
-                            "warning_summary",
-                            "warning_binary_sensors",
+                            "weather_forecast",
+                            "warnings",
                         ],
                     }
                 )

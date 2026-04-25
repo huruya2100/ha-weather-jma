@@ -29,11 +29,12 @@ from .const import (
     CONF_WARNING_AREA_CODE,
     CONF_WARNING_AREA_NAME,
     CONF_WARNING_OFFICE_CODE,
-    DEFAULT_ENABLED_ENTITY_GROUPS,
     DEFAULT_ENABLED_WARNING_LEVELS,
     DEFAULT_UPDATE_INTERVAL_MINUTES,
     ENTITY_GROUPS,
     INACTIVE_WARNING_STATUSES,
+    LEGACY_DEFAULT_ENABLED_ENTITY_GROUPS,
+    LEGACY_ENTITY_GROUP_MAP,
     LEVEL_ADVISORY,
     LEVEL_DANGER_WARNING,
     LEVEL_EMERGENCY_WARNING,
@@ -250,6 +251,7 @@ class CoordinatorSnapshot:
     forecast_meta: ForecastMetadata
     alerts: dict[tuple[str, str], AlertItem]
     alert_summary: AlertSummary
+    last_api_call_at: datetime | None
     last_success_at: datetime | None
     is_partial: bool
 
@@ -394,19 +396,17 @@ def build_location_config(
     raw_entity_groups = data.get(CONF_ENABLED_ENTITY_GROUPS)
     enabled_entity_groups = (
         tuple(
-            group
+            normalized_group
             for group in _iter_strings(raw_entity_groups)
-            if group in ENTITY_GROUPS
+            if (normalized_group := LEGACY_ENTITY_GROUP_MAP.get(group, group))
+            in ENTITY_GROUPS
         )
         if raw_entity_groups is not None
-        else DEFAULT_ENABLED_ENTITY_GROUPS
+        else LEGACY_DEFAULT_ENABLED_ENTITY_GROUPS
     )
+    enabled_entity_groups = tuple(dict.fromkeys(enabled_entity_groups))
 
-    entry_slug = (
-        slugify_name(title)
-        or slugify_name(entry_id)
-        or "ha_weather_jma_entry"
-    )
+    entry_slug = slugify_name(title) or slugify_name(entry_id) or "ha_weather_jma_entry"
     return LocationConfig(
         entry_id=entry_id,
         entry_slug=entry_slug,
@@ -798,6 +798,7 @@ def build_snapshot(
     forecast_meta: ForecastMetadata,
     alerts: dict[tuple[str, str], AlertItem],
     alert_summary: AlertSummary,
+    last_api_call_at: datetime | None,
     last_success_at: datetime | None,
     is_partial: bool,
 ) -> CoordinatorSnapshot:
@@ -809,6 +810,7 @@ def build_snapshot(
         forecast_meta=forecast_meta,
         alerts=alerts,
         alert_summary=alert_summary,
+        last_api_call_at=last_api_call_at,
         last_success_at=last_success_at,
         is_partial=is_partial,
     )

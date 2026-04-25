@@ -48,14 +48,14 @@
           "name": "Name",
           "update_interval_minutes": "Update interval (minutes)",
           "enabled_warning_levels": "Generated warning levels",
-          "enabled_entity_groups": "Additional entity groups"
+          "enabled_entity_groups": "Entity categories"
         }
       }
     }
   },
   "options": {
     "error": {
-      "invalid_warning_levels": "Select at least one warning level when warning binary sensors are enabled."
+      "invalid_warning_levels": "Select at least one warning level when warning entities are enabled."
     },
     "step": {
       "init": {
@@ -63,7 +63,7 @@
         "data": {
           "update_interval_minutes": "Update interval (minutes)",
           "enabled_warning_levels": "Generated warning levels",
-          "enabled_entity_groups": "Additional entity groups"
+          "enabled_entity_groups": "Entity categories"
         }
       }
     }
@@ -105,6 +105,14 @@
           "danger_warning": "Danger warning",
           "emergency_warning": "Emergency warning"
         }
+      },
+      "last_api_call_at": {
+        "name": "Last API call"
+      }
+    },
+    "button": {
+      "force_refresh": {
+        "name": "Force refresh"
       }
     },
     "binary_sensor": {

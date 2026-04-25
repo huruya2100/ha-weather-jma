@@ -18,12 +18,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
-    ENTITY_GROUP_FORECAST_SENSORS,
-    ENTITY_GROUP_LOCATION_INFO,
-    ENTITY_GROUP_WARNING_SUMMARY,
+    ENTITY_GROUP_MANAGEMENT,
+    ENTITY_GROUP_WARNINGS,
+    ENTITY_GROUP_WEATHER_FORECAST,
     SENSOR_ALERT_MAX_LEVEL,
     SENSOR_ALERT_SUMMARY,
     SENSOR_FORECAST_AREA,
+    SENSOR_LAST_API_CALL_AT,
     SENSOR_OBSERVATION_STATION,
     SENSOR_PUBLISHING_OFFICE,
     SENSOR_REPORT_DATETIME,
@@ -89,7 +90,7 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
     HaWeatherJmaSensorDescription(
         key=SENSOR_FORECAST_AREA,
         translation_key=SENSOR_FORECAST_AREA,
-        entity_group=ENTITY_GROUP_LOCATION_INFO,
+        entity_group=ENTITY_GROUP_MANAGEMENT,
         value_fn=lambda snapshot: snapshot.location.forecast_area_name,
         attrs_fn=lambda snapshot: {
             "area_code": snapshot.location.forecast_area_code,
@@ -100,7 +101,7 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
     HaWeatherJmaSensorDescription(
         key=SENSOR_OBSERVATION_STATION,
         translation_key=SENSOR_OBSERVATION_STATION,
-        entity_group=ENTITY_GROUP_LOCATION_INFO,
+        entity_group=ENTITY_GROUP_MANAGEMENT,
         value_fn=lambda snapshot: snapshot.location.observation_station_name,
         attrs_fn=lambda snapshot: {
             "station_code": snapshot.location.observation_station_code,
@@ -111,7 +112,7 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
     HaWeatherJmaSensorDescription(
         key=SENSOR_REPORT_DATETIME,
         translation_key=SENSOR_REPORT_DATETIME,
-        entity_group=ENTITY_GROUP_FORECAST_SENSORS,
+        entity_group=ENTITY_GROUP_WEATHER_FORECAST,
         device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=lambda snapshot: snapshot.forecast_meta.report_datetime,
         attrs_fn=lambda snapshot: {
@@ -121,14 +122,14 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
     HaWeatherJmaSensorDescription(
         key=SENSOR_PUBLISHING_OFFICE,
         translation_key=SENSOR_PUBLISHING_OFFICE,
-        entity_group=ENTITY_GROUP_LOCATION_INFO,
+        entity_group=ENTITY_GROUP_WEATHER_FORECAST,
         value_fn=lambda snapshot: snapshot.forecast_meta.publishing_office,
         attrs_fn=lambda snapshot: {},
     ),
     HaWeatherJmaSensorDescription(
         key=SENSOR_TODAY_PRECIP,
         translation_key=SENSOR_TODAY_PRECIP,
-        entity_group=ENTITY_GROUP_FORECAST_SENSORS,
+        entity_group=ENTITY_GROUP_WEATHER_FORECAST,
         native_unit_of_measurement=PERCENTAGE,
         value_fn=_today_precip_probability,
         attrs_fn=_today_attributes,
@@ -136,7 +137,7 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
     HaWeatherJmaSensorDescription(
         key=SENSOR_TOMORROW_PRECIP,
         translation_key=SENSOR_TOMORROW_PRECIP,
-        entity_group=ENTITY_GROUP_FORECAST_SENSORS,
+        entity_group=ENTITY_GROUP_WEATHER_FORECAST,
         native_unit_of_measurement=PERCENTAGE,
         value_fn=_tomorrow_precip_probability,
         attrs_fn=_tomorrow_attributes,
@@ -144,7 +145,7 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
     HaWeatherJmaSensorDescription(
         key=SENSOR_ALERT_SUMMARY,
         translation_key=SENSOR_ALERT_SUMMARY,
-        entity_group=ENTITY_GROUP_WARNING_SUMMARY,
+        entity_group=ENTITY_GROUP_WARNINGS,
         value_fn=_alert_summary_value,
         attrs_fn=lambda snapshot: {
             "active_types": list(snapshot.alert_summary.active_types),
@@ -157,10 +158,20 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
     HaWeatherJmaSensorDescription(
         key=SENSOR_ALERT_MAX_LEVEL,
         translation_key=SENSOR_ALERT_MAX_LEVEL,
-        entity_group=ENTITY_GROUP_WARNING_SUMMARY,
+        entity_group=ENTITY_GROUP_WARNINGS,
         value_fn=lambda snapshot: snapshot.alert_summary.max_level,
         attrs_fn=lambda snapshot: {
             "active_types": list(snapshot.alert_summary.active_types),
+        },
+    ),
+    HaWeatherJmaSensorDescription(
+        key=SENSOR_LAST_API_CALL_AT,
+        translation_key=SENSOR_LAST_API_CALL_AT,
+        entity_group=ENTITY_GROUP_MANAGEMENT,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda snapshot: snapshot.last_api_call_at,
+        attrs_fn=lambda snapshot: {
+            "last_success_at": snapshot.last_success_at,
         },
     ),
 )

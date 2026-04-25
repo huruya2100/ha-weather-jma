@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, ENTITY_GROUP_WARNING_BINARY_SENSORS, WARNING_ENTITY_TITLES
+from .const import DOMAIN, ENTITY_GROUP_WARNINGS, WARNING_ENTITY_TITLES
 from .coordinator import HaWeatherJmaCoordinator
 from .entity import HaWeatherJmaBaseEntity
 from .parser import warning_entity_title
@@ -26,10 +26,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the binary sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    if (
-        ENTITY_GROUP_WARNING_BINARY_SENSORS
-        not in coordinator.location.enabled_entity_groups
-    ):
+    if ENTITY_GROUP_WARNINGS not in coordinator.location.enabled_entity_groups:
         async_add_entities([])
         return
     entities = []

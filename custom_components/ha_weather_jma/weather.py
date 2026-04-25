@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, ENTITY_GROUP_WEATHER_FORECAST
 from .coordinator import HaWeatherJmaCoordinator
 from .entity import HaWeatherJmaBaseEntity
 from .parser import (
@@ -28,6 +28,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up the weather platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
+    if ENTITY_GROUP_WEATHER_FORECAST not in coordinator.location.enabled_entity_groups:
+        async_add_entities([])
+        return
+
     entity = HaWeatherJmaEntity(coordinator)
     entity.entity_id = async_generate_entity_id(
         "weather.{}",

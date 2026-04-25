@@ -377,10 +377,46 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(
             location.enabled_entity_groups,
             (
-                "forecast_sensors",
-                "warning_summary",
-                "warning_binary_sensors",
-                "location_info",
+                "weather_forecast",
+                "warnings",
+                "management",
+            ),
+        )
+
+    def test_build_location_config_maps_legacy_entity_groups(self) -> None:
+        location = PARSER.build_location_config(
+            "entry-123",
+            "東京",
+            {
+                "forecast_area_code": "130010",
+                "forecast_area_name": "東京地方",
+                "forecast_office_code": "130000",
+                "forecast_office_name": "気象庁",
+                "observation_station_code": "44132",
+                "observation_station_name": "東京",
+                "warning_area_code": "1310100",
+                "warning_area_name": "千代田区",
+                "warning_office_code": "130000",
+                "latitude": 35.6916,
+                "longitude": 139.75,
+                "update_interval_minutes": 10,
+                "enabled_warning_levels": ["advisory", "warning"],
+                "enabled_entity_groups": [
+                    "forecast_sensors",
+                    "warning_summary",
+                    "warning_binary_sensors",
+                    "location_info",
+                    "actions",
+                ],
+            },
+        )
+
+        self.assertEqual(
+            location.enabled_entity_groups,
+            (
+                "weather_forecast",
+                "warnings",
+                "management",
             ),
         )
 
