@@ -48,14 +48,14 @@
           "name": "名前",
           "update_interval_minutes": "更新間隔（分）",
           "enabled_warning_levels": "生成する警報レベル",
-          "enabled_entity_groups": "追加するエンティティ範囲"
+          "enabled_entity_groups": "エンティティ分類"
         }
       }
     }
   },
   "options": {
     "error": {
-      "invalid_warning_levels": "警報バイナリセンサーを有効にする場合は、警報レベルを1つ以上選択してください。"
+      "invalid_warning_levels": "注意報・警報エンティティを有効にする場合は、警報レベルを1つ以上選択してください。"
     },
     "step": {
       "init": {
@@ -63,7 +63,7 @@
         "data": {
           "update_interval_minutes": "更新間隔（分）",
           "enabled_warning_levels": "生成する警報レベル",
-          "enabled_entity_groups": "追加するエンティティ範囲"
+          "enabled_entity_groups": "エンティティ分類"
         }
       }
     }

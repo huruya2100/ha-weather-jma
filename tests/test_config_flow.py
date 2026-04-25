@@ -86,9 +86,8 @@ class ConfigFlowTests(unittest.TestCase):
                     "update_interval_minutes": 15,
                     "enabled_warning_levels": ["advisory", "warning"],
                     "enabled_entity_groups": [
-                        "forecast_sensors",
-                        "warning_summary",
-                        "warning_binary_sensors",
+                        "weather_forecast",
+                        "warnings",
                     ],
                 }
             )
@@ -104,7 +103,7 @@ class ConfigFlowTests(unittest.TestCase):
         )
         self.assertEqual(
             result["data"]["enabled_entity_groups"],
-            ["forecast_sensors", "warning_summary", "warning_binary_sensors"],
+            ["weather_forecast", "warnings"],
         )
 
     def test_options_step_includes_entity_group_selection(self) -> None:
@@ -135,11 +134,20 @@ class ConfigFlowTests(unittest.TestCase):
         self.assertEqual(
             self._schema_default(result["data_schema"], "enabled_entity_groups"),
             [
-                "forecast_sensors",
-                "warning_summary",
-                "warning_binary_sensors",
-                "actions",
+                "weather_forecast",
+                "warnings",
+                "management",
             ],
+        )
+
+    def test_options_step_shows_entity_category_labels(self) -> None:
+        self.assertEqual(
+            CONFIG_FLOW.ENTITY_GROUP_LABELS,
+            {
+                "weather_forecast": "天気予報",
+                "warnings": "注意報・警報",
+                "management": "管理ツール",
+            },
         )
 
     def test_config_flow_allows_disabling_warning_binary_sensors_and_levels(
@@ -157,7 +165,7 @@ class ConfigFlowTests(unittest.TestCase):
                     "name": "東京",
                     "update_interval_minutes": 10,
                     "enabled_warning_levels": [],
-                    "enabled_entity_groups": ["forecast_sensors"],
+                    "enabled_entity_groups": ["weather_forecast"],
                 }
             )
         )
@@ -249,9 +257,8 @@ class ConfigFlowTests(unittest.TestCase):
                         "update_interval_minutes": 10,
                         "enabled_warning_levels": ["advisory", "warning"],
                         "enabled_entity_groups": [
-                            "forecast_sensors",
-                            "warning_summary",
-                            "warning_binary_sensors",
+                            "weather_forecast",
+                            "warnings",
                         ],
                     }
                 )

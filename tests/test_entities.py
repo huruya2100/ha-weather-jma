@@ -42,11 +42,9 @@ def build_location(enabled_entity_groups=None):
             ],
             "enabled_entity_groups": enabled_entity_groups
             or [
-                "forecast_sensors",
-                "warning_summary",
-                "warning_binary_sensors",
-                "location_info",
-                "actions",
+                "weather_forecast",
+                "warnings",
+                "management",
             ],
         },
     )
@@ -120,6 +118,37 @@ class EntityTests(unittest.TestCase):
         self.assertEqual(forecast[0]["condition"], "cloudy")
         self.assertEqual(forecast[1]["native_temperature"], 21.0)
         self.assertEqual(forecast[1]["native_templow"], 14.0)
+
+    def test_weather_platform_skips_entity_when_forecast_group_disabled(self) -> None:
+        snapshot = build_snapshot(observation=None)
+        disabled_location = build_location(["warnings", "management"])
+        coordinator = build_coordinator(
+            PARSER.build_snapshot(
+                location=disabled_location,
+                observation=snapshot.observation,
+                forecast_days=snapshot.forecast_days,
+                forecast_meta=snapshot.forecast_meta,
+                alerts=snapshot.alerts,
+                alert_summary=snapshot.alert_summary,
+                last_api_call_at=snapshot.last_api_call_at,
+                last_success_at=snapshot.last_success_at,
+                is_partial=snapshot.is_partial,
+            )
+        )
+        hass = types.SimpleNamespace(
+            data={"ha_weather_jma": {"entry-123": coordinator}},
+        )
+        added_entities: list[Any] = []
+
+        asyncio.run(
+            WEATHER.async_setup_entry(
+                hass,
+                types.SimpleNamespace(entry_id="entry-123"),
+                added_entities.extend,
+            )
+        )
+
+        self.assertEqual(added_entities, [])
 
     def test_alert_summary_sensor_returns_none_when_warning_fetch_failed(self) -> None:
         alerts = PARSER.build_default_alerts(
@@ -243,7 +272,7 @@ class EntityTests(unittest.TestCase):
         self.assertIsNone(entity.is_on)
         self.assertIsNone(entity.extra_state_attributes["status_text"])
 
-    def test_sensor_platform_skips_location_info_group_when_disabled(self) -> None:
+    def test_sensor_platform_skips_management_group_when_disabled(self) -> None:
         snapshot = build_snapshot(observation=None)
         location_data = {
             "forecast_area_code": snapshot.location.forecast_area_code,
@@ -260,9 +289,8 @@ class EntityTests(unittest.TestCase):
             "update_interval_minutes": snapshot.location.update_interval_minutes,
             "enabled_warning_levels": list(snapshot.location.enabled_warning_levels),
             "enabled_entity_groups": [
-                "forecast_sensors",
-                "warning_summary",
-                "warning_binary_sensors",
+                "weather_forecast",
+                "warnings",
             ],
         }
         filtered_snapshot = PARSER.build_snapshot(
@@ -300,7 +328,7 @@ class EntityTests(unittest.TestCase):
             entity_ids,
         )
 
-    def test_button_platform_adds_force_refresh_button_when_actions_enabled(
+    def test_button_platform_adds_force_refresh_button_when_management_enabled(
         self,
     ) -> None:
         snapshot = build_snapshot(observation=None)
@@ -342,14 +370,12 @@ class EntityTests(unittest.TestCase):
 
         self.assertEqual(coordinator.refresh_calls, 1)
 
-    def test_button_platform_skips_actions_group_when_disabled(self) -> None:
+    def test_button_platform_skips_management_group_when_disabled(self) -> None:
         snapshot = build_snapshot(observation=None)
         disabled_location = build_location(
             [
-                "forecast_sensors",
-                "warning_summary",
-                "warning_binary_sensors",
-                "location_info",
+                "weather_forecast",
+                "warnings",
             ]
         )
         coordinator = build_coordinator(
@@ -396,7 +422,7 @@ class EntityTests(unittest.TestCase):
             "longitude": snapshot.location.longitude,
             "update_interval_minutes": snapshot.location.update_interval_minutes,
             "enabled_warning_levels": list(snapshot.location.enabled_warning_levels),
-            "enabled_entity_groups": ["forecast_sensors", "warning_summary"],
+            "enabled_entity_groups": ["weather_forecast"],
         }
         filtered_snapshot = PARSER.build_snapshot(
             location=PARSER.build_location_config(

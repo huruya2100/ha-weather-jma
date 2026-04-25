@@ -38,7 +38,7 @@ from .const import (
     DEFAULT_UPDATE_INTERVAL_MINUTES,
     DOMAIN,
     ENTITY_GROUP_LABELS,
-    ENTITY_GROUP_WARNING_BINARY_SENSORS,
+    ENTITY_GROUP_WARNINGS,
     MAX_UPDATE_INTERVAL_MINUTES,
     MIN_UPDATE_INTERVAL_MINUTES,
     RECOMMENDED_ENABLED_ENTITY_GROUPS,
@@ -363,10 +363,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             for group in user_input.get(CONF_ENABLED_ENTITY_GROUPS, [])
             if group in ENTITY_GROUP_LABELS
         ]
-        if (
-            ENTITY_GROUP_WARNING_BINARY_SENSORS in enabled_entity_groups
-            and not enabled_levels
-        ):
+        if ENTITY_GROUP_WARNINGS in enabled_entity_groups and not enabled_levels:
             errors["base"] = "invalid_warning_levels"
 
         return (
