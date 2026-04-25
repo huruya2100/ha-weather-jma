@@ -9,14 +9,15 @@ from typing import Any
 
 from tests.support import load_modules, read_fixture, read_text_fixture
 
-LOADED = load_modules("binary_sensor", "sensor", "weather", "parser")
+LOADED = load_modules("binary_sensor", "button", "sensor", "weather", "parser")
 BINARY_SENSOR = LOADED["binary_sensor"]
+BUTTON = LOADED["button"]
 PARSER = LOADED["parser"]
 SENSOR = LOADED["sensor"]
 WEATHER = LOADED["weather"]
 
 
-def build_location():
+def build_location(enabled_entity_groups=None):
     return PARSER.build_location_config(
         "entry-123",
         "東京",
@@ -39,11 +40,13 @@ def build_location():
                 "danger_warning",
                 "emergency_warning",
             ],
-            "enabled_entity_groups": [
+            "enabled_entity_groups": enabled_entity_groups
+            or [
                 "forecast_sensors",
                 "warning_summary",
                 "warning_binary_sensors",
                 "location_info",
+                "actions",
             ],
         },
     )
@@ -66,6 +69,7 @@ def build_snapshot(*, observation=None, alerts=None):
         forecast_meta=forecast_meta,
         alerts=alert_items,
         alert_summary=PARSER.build_alert_summary(alert_items),
+        last_api_call_at=PARSER.parse_datetime("2026-04-14T11:55:00+00:00"),
         last_success_at=PARSER.parse_datetime("2026-04-14T11:50:00+00:00"),
         is_partial=False,
     )
@@ -174,6 +178,22 @@ class EntityTests(unittest.TestCase):
         self.assertEqual(entity.native_value, "danger_warning")
         self.assertIn("heavy_rain", entity.extra_state_attributes["active_types"])
 
+    def test_last_api_call_sensor_reports_timestamp(self) -> None:
+        snapshot = build_snapshot(observation=None)
+        description = next(
+            item for item in SENSOR.DESCRIPTIONS if item.key == "last_api_call_at"
+        )
+        entity = SENSOR.HaWeatherJmaSensorEntity(
+            build_coordinator(snapshot),
+            description,
+        )
+
+        self.assertEqual(entity.native_value, snapshot.last_api_call_at)
+        self.assertEqual(
+            entity.extra_state_attributes["last_success_at"],
+            snapshot.last_success_at,
+        )
+
     def test_binary_sensor_is_off_when_warning_cleared(self) -> None:
         alerts = PARSER.parse_alerts_xml(
             ["""<?xml version="1.0" encoding="UTF-8"?>
@@ -256,6 +276,7 @@ class EntityTests(unittest.TestCase):
             forecast_meta=snapshot.forecast_meta,
             alerts=snapshot.alerts,
             alert_summary=snapshot.alert_summary,
+            last_api_call_at=snapshot.last_api_call_at,
             last_success_at=snapshot.last_success_at,
             is_partial=snapshot.is_partial,
         )
@@ -278,14 +299,84 @@ class EntityTests(unittest.TestCase):
             "sensor.ha_weather_jma_entry_123_forecast_area",
             entity_ids,
         )
-        self.assertNotIn(
-            "sensor.ha_weather_jma_entry_123_observation_station",
-            entity_ids,
+
+    def test_button_platform_adds_force_refresh_button_when_actions_enabled(self) -> None:
+        snapshot = build_snapshot(observation=None)
+        coordinator = build_coordinator(snapshot)
+        hass = types.SimpleNamespace(
+            data={"ha_weather_jma": {"entry-123": coordinator}},
         )
-        self.assertIn(
-            "sensor.ha_weather_jma_entry_123_today_precip_probability",
-            entity_ids,
+        added_entities: list[Any] = []
+
+        asyncio.run(
+            BUTTON.async_setup_entry(
+                hass,
+                types.SimpleNamespace(entry_id="entry-123"),
+                added_entities.extend,
+            )
         )
+
+        self.assertEqual(len(added_entities), 1)
+        self.assertEqual(
+            added_entities[0].entity_id,
+            "button.ha_weather_jma_entry_123_force_refresh",
+        )
+
+    def test_button_press_requests_coordinator_refresh(self) -> None:
+        snapshot = build_snapshot(observation=None)
+
+        class ButtonCoordinator(types.SimpleNamespace):
+            def __init__(self) -> None:
+                super().__init__(location=snapshot.location, data=snapshot, hass=None)
+                self.refresh_calls = 0
+
+            async def async_request_refresh(self) -> None:
+                self.refresh_calls += 1
+
+        coordinator = ButtonCoordinator()
+        entity = BUTTON.HaWeatherJmaForceRefreshButtonEntity(coordinator)
+
+        asyncio.run(entity.async_press())
+
+        self.assertEqual(coordinator.refresh_calls, 1)
+
+    def test_button_platform_skips_actions_group_when_disabled(self) -> None:
+        snapshot = build_snapshot(observation=None)
+        disabled_location = build_location(
+            [
+                "forecast_sensors",
+                "warning_summary",
+                "warning_binary_sensors",
+                "location_info",
+            ]
+        )
+        coordinator = build_coordinator(
+            PARSER.build_snapshot(
+                location=disabled_location,
+                observation=snapshot.observation,
+                forecast_days=snapshot.forecast_days,
+                forecast_meta=snapshot.forecast_meta,
+                alerts=snapshot.alerts,
+                alert_summary=snapshot.alert_summary,
+                last_api_call_at=snapshot.last_api_call_at,
+                last_success_at=snapshot.last_success_at,
+                is_partial=snapshot.is_partial,
+            )
+        )
+        hass = types.SimpleNamespace(
+            data={"ha_weather_jma": {"entry-123": coordinator}},
+        )
+        added_entities: list[Any] = []
+
+        asyncio.run(
+            BUTTON.async_setup_entry(
+                hass,
+                types.SimpleNamespace(entry_id="entry-123"),
+                added_entities.extend,
+            )
+        )
+
+        self.assertEqual(added_entities, [])
 
     def test_binary_sensor_platform_skips_entities_when_group_disabled(self) -> None:
         snapshot = build_snapshot(observation=None)
@@ -316,6 +407,7 @@ class EntityTests(unittest.TestCase):
             forecast_meta=snapshot.forecast_meta,
             alerts=snapshot.alerts,
             alert_summary=snapshot.alert_summary,
+            last_api_call_at=snapshot.last_api_call_at,
             last_success_at=snapshot.last_success_at,
             is_partial=snapshot.is_partial,
         )

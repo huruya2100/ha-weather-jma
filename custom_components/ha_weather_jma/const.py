@@ -75,23 +75,33 @@ ENTITY_GROUP_FORECAST_SENSORS: Final = "forecast_sensors"
 ENTITY_GROUP_WARNING_SUMMARY: Final = "warning_summary"
 ENTITY_GROUP_WARNING_BINARY_SENSORS: Final = "warning_binary_sensors"
 ENTITY_GROUP_LOCATION_INFO: Final = "location_info"
-ENTITY_GROUPS: Final[tuple[str, str, str, str]] = (
+ENTITY_GROUP_ACTIONS: Final = "actions"
+ENTITY_GROUPS: Final[tuple[str, str, str, str, str]] = (
+    ENTITY_GROUP_FORECAST_SENSORS,
+    ENTITY_GROUP_WARNING_SUMMARY,
+    ENTITY_GROUP_WARNING_BINARY_SENSORS,
+    ENTITY_GROUP_LOCATION_INFO,
+    ENTITY_GROUP_ACTIONS,
+)
+DEFAULT_ENABLED_ENTITY_GROUPS: Final[tuple[str, str, str, str, str]] = ENTITY_GROUPS
+LEGACY_DEFAULT_ENABLED_ENTITY_GROUPS: Final[tuple[str, str, str, str]] = (
     ENTITY_GROUP_FORECAST_SENSORS,
     ENTITY_GROUP_WARNING_SUMMARY,
     ENTITY_GROUP_WARNING_BINARY_SENSORS,
     ENTITY_GROUP_LOCATION_INFO,
 )
-DEFAULT_ENABLED_ENTITY_GROUPS: Final[tuple[str, str, str, str]] = ENTITY_GROUPS
-RECOMMENDED_ENABLED_ENTITY_GROUPS: Final[tuple[str, str, str]] = (
+RECOMMENDED_ENABLED_ENTITY_GROUPS: Final[tuple[str, str, str, str]] = (
     ENTITY_GROUP_FORECAST_SENSORS,
     ENTITY_GROUP_WARNING_SUMMARY,
     ENTITY_GROUP_WARNING_BINARY_SENSORS,
+    ENTITY_GROUP_ACTIONS,
 )
 ENTITY_GROUP_LABELS: Final[dict[str, str]] = {
     ENTITY_GROUP_FORECAST_SENSORS: "予報センサー",
     ENTITY_GROUP_WARNING_SUMMARY: "警報サマリーセンサー",
     ENTITY_GROUP_WARNING_BINARY_SENSORS: "警報バイナリセンサー",
     ENTITY_GROUP_LOCATION_INFO: "設定情報センサー",
+    ENTITY_GROUP_ACTIONS: "操作エンティティ",
 }
 
 WEATHER_ENTITY_KEY: Final = "weather"
@@ -103,6 +113,8 @@ SENSOR_TODAY_PRECIP: Final = "today_precip_probability"
 SENSOR_TOMORROW_PRECIP: Final = "tomorrow_precip_probability"
 SENSOR_ALERT_SUMMARY: Final = "alert_summary"
 SENSOR_ALERT_MAX_LEVEL: Final = "alert_max_level"
+SENSOR_LAST_API_CALL_AT: Final = "last_api_call_at"
+BUTTON_FORCE_REFRESH: Final = "force_refresh"
 
 UNKNOWN_WEATHER_CONDITION: Final = "unknown"
 

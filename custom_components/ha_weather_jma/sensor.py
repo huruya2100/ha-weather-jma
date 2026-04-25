@@ -24,6 +24,7 @@ from .const import (
     SENSOR_ALERT_MAX_LEVEL,
     SENSOR_ALERT_SUMMARY,
     SENSOR_FORECAST_AREA,
+    SENSOR_LAST_API_CALL_AT,
     SENSOR_OBSERVATION_STATION,
     SENSOR_PUBLISHING_OFFICE,
     SENSOR_REPORT_DATETIME,
@@ -161,6 +162,16 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
         value_fn=lambda snapshot: snapshot.alert_summary.max_level,
         attrs_fn=lambda snapshot: {
             "active_types": list(snapshot.alert_summary.active_types),
+        },
+    ),
+    HaWeatherJmaSensorDescription(
+        key=SENSOR_LAST_API_CALL_AT,
+        translation_key=SENSOR_LAST_API_CALL_AT,
+        entity_group=ENTITY_GROUP_LOCATION_INFO,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda snapshot: snapshot.last_api_call_at,
+        attrs_fn=lambda snapshot: {
+            "last_success_at": snapshot.last_success_at,
         },
     ),
 )

@@ -105,6 +105,14 @@
           "danger_warning": "Danger warning",
           "emergency_warning": "Emergency warning"
         }
+      },
+      "last_api_call_at": {
+        "name": "Last API call"
+      }
+    },
+    "button": {
+      "force_refresh": {
+        "name": "Force refresh"
       }
     },
     "binary_sensor": {

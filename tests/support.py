@@ -24,6 +24,7 @@ MODULE_LOAD_ORDER = (
     "entity",
     "weather",
     "sensor",
+    "button",
     "binary_sensor",
     "config_flow",
 )
@@ -36,6 +37,7 @@ MODULE_DEPENDENCIES: dict[str, tuple[str, ...]] = {
     "entity": ("const", "coordinator", "parser"),
     "weather": ("const", "coordinator", "entity", "parser"),
     "sensor": ("const", "coordinator", "entity", "parser"),
+    "button": ("const", "coordinator", "entity"),
     "binary_sensor": ("const", "coordinator", "entity", "parser"),
     "config_flow": ("api", "const", "parser"),
 }
@@ -158,6 +160,7 @@ def _install_homeassistant_stubs() -> None:
         WEATHER = "weather"
         SENSOR = "sensor"
         BINARY_SENSOR = "binary_sensor"
+        BUTTON = "button"
 
     class UnitOfPressure:
         HPA = "hPa"
@@ -349,6 +352,9 @@ def _install_homeassistant_stubs() -> None:
         async def async_config_entry_first_refresh(self) -> None:
             self.data = await self._async_update_data()
 
+        async def async_request_refresh(self) -> None:
+            self.data = await self._async_update_data()
+
     class CoordinatorEntity:
         """Minimal coordinator-backed entity."""
 
@@ -411,6 +417,21 @@ def _install_homeassistant_stubs() -> None:
     weather_module.WeatherEntityFeature = WeatherEntityFeature
     sys.modules["homeassistant.components.weather"] = weather_module
     components_module.weather = weather_module
+
+    button_module = types.ModuleType("homeassistant.components.button")
+
+    class ButtonEntity:
+        pass
+
+    @dataclass(slots=True, frozen=True, kw_only=True)
+    class ButtonEntityDescription:
+        key: str | None = None
+        translation_key: str | None = None
+
+    button_module.ButtonEntity = ButtonEntity
+    button_module.ButtonEntityDescription = ButtonEntityDescription
+    sys.modules["homeassistant.components.button"] = button_module
+    components_module.button = button_module
 
     sensor_module = types.ModuleType("homeassistant.components.sensor")
 

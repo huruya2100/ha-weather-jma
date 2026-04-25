@@ -101,6 +101,7 @@ def build_previous_snapshot():
         forecast_meta=forecast_meta,
         alerts=alerts,
         alert_summary=PARSER.build_alert_summary(alerts),
+        last_api_call_at=PARSER.parse_datetime("2026-04-14T11:55:00+00:00"),
         last_success_at=PARSER.parse_datetime("2026-04-14T11:50:00+00:00"),
         is_partial=False,
     )
@@ -127,6 +128,8 @@ class CoordinatorTests(unittest.TestCase):
         self.assertIsNotNone(snapshot.observation)
         self.assertEqual(len(snapshot.forecast_days), 3)
         self.assertEqual(snapshot.alert_summary.max_level, "advisory")
+        self.assertIsNotNone(snapshot.last_api_call_at)
+        self.assertEqual(snapshot.last_success_at, snapshot.last_api_call_at)
 
     def test_observation_only_failure_keeps_previous_observation_and_marks_partial(
         self,
@@ -212,6 +215,7 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual(snapshot.forecast_meta, previous_snapshot.forecast_meta)
         self.assertEqual(snapshot.alerts, previous_snapshot.alerts)
         self.assertEqual(snapshot.alert_summary, previous_snapshot.alert_summary)
+        self.assertNotEqual(snapshot.last_api_call_at, previous_snapshot.last_api_call_at)
         self.assertEqual(snapshot.last_success_at, previous_snapshot.last_success_at)
 
     def test_all_fetches_fail_without_previous_snapshot_raises_update_failed(self) -> None:

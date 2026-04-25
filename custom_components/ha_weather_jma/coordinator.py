@@ -60,6 +60,7 @@ class HaWeatherJmaCoordinator(DataUpdateCoordinator[CoordinatorSnapshot]):
 
     async def _async_update_data(self) -> CoordinatorSnapshot:
         previous = self.data if isinstance(self.data, CoordinatorSnapshot) else None
+        requested_at = datetime.now(timezone.utc)
 
         latest_time: str | None = None
         observation: ObservationSnapshot | None = None
@@ -177,6 +178,7 @@ class HaWeatherJmaCoordinator(DataUpdateCoordinator[CoordinatorSnapshot]):
                 forecast_meta=previous.forecast_meta,
                 alerts=previous.alerts,
                 alert_summary=previous.alert_summary,
+                last_api_call_at=requested_at,
                 last_success_at=previous.last_success_at,
                 is_partial=True,
             )
@@ -214,6 +216,7 @@ class HaWeatherJmaCoordinator(DataUpdateCoordinator[CoordinatorSnapshot]):
             forecast_meta=forecast_meta,
             alerts=alerts,
             alert_summary=alert_summary,
-            last_success_at=datetime.now(timezone.utc),
+            last_api_call_at=requested_at,
+            last_success_at=requested_at,
             is_partial=is_partial,
         )
