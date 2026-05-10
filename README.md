@@ -1,5 +1,6 @@
 # ha-weather-jma
 
+[![Pytest](https://github.com/huruya2100/ha-weather-jma/actions/workflows/auto-test.yml/badge.svg?branch=main)](https://github.com/huruya2100/ha-weather-jma/actions/workflows/auto-test.yml)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://www.hacs.xyz/docs/faq/custom_repositories/)
 
 Unofficial Home Assistant custom integration using weather data published by the
