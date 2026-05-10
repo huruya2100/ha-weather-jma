@@ -136,4 +136,4 @@ class HaWeatherJmaEntity(HaWeatherJmaBaseEntity, WeatherEntity):
     def _handle_coordinator_update(self) -> None:
         super()._handle_coordinator_update()
         if self.hass is not None:
-            self.hass.async_create_task(self.async_update_listeners())
+            self.hass.async_create_task(self.async_update_listeners(("daily",)))

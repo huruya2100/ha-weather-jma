@@ -57,18 +57,20 @@ select:
 8. Additional entity groups to create
 
 The update interval range is 5 to 60 minutes, and the default is 10 minutes.
-By default, config-only sensors such as forecast area and observation station
-are not created.
+Location and update metadata are exposed on the management control entity
+instead of separate sensors.
 
 ### Created entities
 
 After setup, the integration creates:
 
 - 1 weather entity
-- Sensor entities such as forecast area, observation station, report datetime,
-  publishing office, today's precipitation probability, tomorrow's
-  precipitation probability, alert summary, and alert max level
+- Sensor entities such as report datetime, publishing office, today's
+  precipitation probability, tomorrow's precipitation probability, alert
+  summary, and alert max level
 - Binary sensor entities for each enabled warning/advisory level
+- Management control entities for force refresh, forecast/observation/warning
+  locations, and refresh timestamps
 
 ### Data sources
 

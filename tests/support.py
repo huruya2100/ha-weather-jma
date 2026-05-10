@@ -25,6 +25,8 @@ MODULE_LOAD_ORDER = (
     "weather",
     "sensor",
     "button",
+    "datetime",
+    "text",
     "binary_sensor",
     "config_flow",
 )
@@ -38,6 +40,8 @@ MODULE_DEPENDENCIES: dict[str, tuple[str, ...]] = {
     "weather": ("const", "coordinator", "entity", "parser"),
     "sensor": ("const", "coordinator", "entity", "parser"),
     "button": ("const", "coordinator", "entity"),
+    "datetime": ("const", "coordinator", "entity", "parser"),
+    "text": ("const", "coordinator", "entity", "parser"),
     "binary_sensor": ("const", "coordinator", "entity", "parser"),
     "config_flow": ("api", "const", "parser"),
 }
@@ -161,6 +165,8 @@ def _install_homeassistant_stubs() -> None:
         SENSOR = "sensor"
         BINARY_SENSOR = "binary_sensor"
         BUTTON = "button"
+        DATETIME = "datetime"
+        TEXT = "text"
 
     class UnitOfPressure:
         HPA = "hPa"
@@ -407,7 +413,7 @@ def _install_homeassistant_stubs() -> None:
     weather_module = types.ModuleType("homeassistant.components.weather")
 
     class WeatherEntity:
-        async def async_update_listeners(self) -> None:
+        async def async_update_listeners(self, forecast_types) -> None:
             return None
 
     class WeatherEntityFeature:
@@ -432,6 +438,36 @@ def _install_homeassistant_stubs() -> None:
     button_module.ButtonEntityDescription = ButtonEntityDescription
     sys.modules["homeassistant.components.button"] = button_module
     components_module.button = button_module
+
+    datetime_module = types.ModuleType("homeassistant.components.datetime")
+
+    class DateTimeEntity:
+        pass
+
+    @dataclass(slots=True, frozen=True, kw_only=True)
+    class DateTimeEntityDescription:
+        key: str | None = None
+        translation_key: str | None = None
+
+    datetime_module.DateTimeEntity = DateTimeEntity
+    datetime_module.DateTimeEntityDescription = DateTimeEntityDescription
+    sys.modules["homeassistant.components.datetime"] = datetime_module
+    components_module.datetime = datetime_module
+
+    text_module = types.ModuleType("homeassistant.components.text")
+
+    class TextEntity:
+        pass
+
+    @dataclass(slots=True, frozen=True, kw_only=True)
+    class TextEntityDescription:
+        key: str | None = None
+        translation_key: str | None = None
+
+    text_module.TextEntity = TextEntity
+    text_module.TextEntityDescription = TextEntityDescription
+    sys.modules["homeassistant.components.text"] = text_module
+    components_module.text = text_module
 
     sensor_module = types.ModuleType("homeassistant.components.sensor")
 

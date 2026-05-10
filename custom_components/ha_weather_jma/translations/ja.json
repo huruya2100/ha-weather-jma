@@ -75,12 +75,6 @@
       }
     },
     "sensor": {
-      "forecast_area": {
-        "name": "予報対象地域"
-      },
-      "observation_station": {
-        "name": "観測所"
-      },
       "report_datetime": {
         "name": "予報発表時刻"
       },
@@ -105,14 +99,30 @@
           "danger_warning": "危険警報",
           "emergency_warning": "特別警報"
         }
-      },
-      "last_api_call_at": {
-        "name": "最終APIコール時刻"
       }
     },
     "button": {
       "force_refresh": {
         "name": "強制再取得"
+      }
+    },
+    "datetime": {
+      "last_api_call_at": {
+        "name": "最終APIコール時刻"
+      },
+      "last_success_at": {
+        "name": "最終取得成功時刻"
+      }
+    },
+    "text": {
+      "forecast_area": {
+        "name": "予報対象地域"
+      },
+      "observation_station": {
+        "name": "観測所"
+      },
+      "warning_area": {
+        "name": "警報地域"
       }
     },
     "binary_sensor": {

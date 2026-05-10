@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -49,3 +51,22 @@ class HaWeatherJmaForceRefreshButtonEntity(HaWeatherJmaBaseEntity, ButtonEntity)
     async def async_press(self) -> None:
         """Trigger an immediate refresh."""
         await self.coordinator.async_request_refresh()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {
+            "forecast_area_name": self.location.forecast_area_name,
+            "forecast_area_code": self.location.forecast_area_code,
+            "forecast_office_name": self.location.forecast_office_name,
+            "forecast_office_code": self.location.forecast_office_code,
+            "observation_station_name": self.location.observation_station_name,
+            "observation_station_code": self.location.observation_station_code,
+            "warning_area_name": self.location.warning_area_name,
+            "warning_area_code": self.location.warning_area_code,
+            "warning_office_code": self.location.warning_office_code,
+            "latitude": self.location.latitude,
+            "longitude": self.location.longitude,
+            "update_interval_minutes": self.location.update_interval_minutes,
+            "last_api_call_at": self.snapshot.last_api_call_at,
+            "last_success_at": self.snapshot.last_success_at,
+        }

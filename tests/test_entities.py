@@ -9,11 +9,21 @@ from typing import Any
 
 from tests.support import load_modules, read_fixture, read_text_fixture
 
-LOADED = load_modules("binary_sensor", "button", "sensor", "weather", "parser")
+LOADED = load_modules(
+    "binary_sensor",
+    "button",
+    "datetime",
+    "sensor",
+    "text",
+    "weather",
+    "parser",
+)
 BINARY_SENSOR = LOADED["binary_sensor"]
 BUTTON = LOADED["button"]
+DATETIME = LOADED["datetime"]
 PARSER = LOADED["parser"]
 SENSOR = LOADED["sensor"]
+TEXT = LOADED["text"]
 WEATHER = LOADED["weather"]
 
 
@@ -119,6 +129,29 @@ class EntityTests(unittest.TestCase):
         self.assertEqual(forecast[1]["native_temperature"], 21.0)
         self.assertEqual(forecast[1]["native_templow"], 14.0)
 
+    def test_weather_coordinator_update_notifies_daily_forecast_listeners(self) -> None:
+        snapshot = build_snapshot(observation=None)
+
+        class WeatherEntity(WEATHER.HaWeatherJmaEntity):
+            def __init__(self) -> None:
+                super().__init__(build_coordinator(snapshot))
+                self.updated_forecast_types = None
+
+            def async_update_listeners(self, forecast_types):
+                self.updated_forecast_types = forecast_types
+
+                async def _done():
+                    return None
+
+                return _done()
+
+        entity = WeatherEntity()
+        entity.hass = types.SimpleNamespace(async_create_task=lambda coro: coro.close())
+
+        entity._handle_coordinator_update()
+
+        self.assertEqual(entity.updated_forecast_types, ("daily",))
+
     def test_weather_platform_skips_entity_when_forecast_group_disabled(self) -> None:
         snapshot = build_snapshot(observation=None)
         disabled_location = build_location(["warnings", "management"])
@@ -207,20 +240,224 @@ class EntityTests(unittest.TestCase):
         self.assertEqual(entity.native_value, "danger_warning")
         self.assertIn("heavy_rain", entity.extra_state_attributes["active_types"])
 
-    def test_last_api_call_sensor_reports_timestamp(self) -> None:
+    def test_force_refresh_button_reports_refresh_timestamps(self) -> None:
         snapshot = build_snapshot(observation=None)
-        description = next(
-            item for item in SENSOR.DESCRIPTIONS if item.key == "last_api_call_at"
-        )
-        entity = SENSOR.HaWeatherJmaSensorEntity(
-            build_coordinator(snapshot),
-            description,
+        entity = BUTTON.HaWeatherJmaForceRefreshButtonEntity(
+            build_coordinator(snapshot)
         )
 
-        self.assertEqual(entity.native_value, snapshot.last_api_call_at)
+        self.assertEqual(
+            entity.extra_state_attributes["forecast_area_name"],
+            snapshot.location.forecast_area_name,
+        )
+        self.assertEqual(
+            entity.extra_state_attributes["forecast_area_code"],
+            snapshot.location.forecast_area_code,
+        )
+        self.assertEqual(
+            entity.extra_state_attributes["observation_station_name"],
+            snapshot.location.observation_station_name,
+        )
+        self.assertEqual(
+            entity.extra_state_attributes["observation_station_code"],
+            snapshot.location.observation_station_code,
+        )
+        self.assertEqual(
+            entity.extra_state_attributes["warning_area_name"],
+            snapshot.location.warning_area_name,
+        )
+        self.assertEqual(
+            entity.extra_state_attributes["warning_area_code"],
+            snapshot.location.warning_area_code,
+        )
+        self.assertEqual(
+            entity.extra_state_attributes["update_interval_minutes"],
+            snapshot.location.update_interval_minutes,
+        )
+        self.assertEqual(
+            entity.extra_state_attributes["last_api_call_at"],
+            snapshot.last_api_call_at,
+        )
         self.assertEqual(
             entity.extra_state_attributes["last_success_at"],
             snapshot.last_success_at,
+        )
+
+    def test_datetime_platform_adds_timestamps_when_management_enabled(
+        self,
+    ) -> None:
+        snapshot = build_snapshot(observation=None)
+        coordinator = build_coordinator(snapshot)
+        hass = types.SimpleNamespace(
+            data={"ha_weather_jma": {"entry-123": coordinator}},
+        )
+        added_entities: list[Any] = []
+
+        asyncio.run(
+            DATETIME.async_setup_entry(
+                hass,
+                types.SimpleNamespace(entry_id="entry-123"),
+                added_entities.extend,
+            )
+        )
+
+        values_by_entity_id = {
+            entity.entity_id: entity.native_value for entity in added_entities
+        }
+        self.assertEqual(
+            values_by_entity_id,
+            {
+                "datetime.ha_weather_jma_entry_123_last_api_call_at": (
+                    snapshot.last_api_call_at
+                ),
+                "datetime.ha_weather_jma_entry_123_last_success_at": (
+                    snapshot.last_success_at
+                ),
+            },
+        )
+
+    def test_datetime_platform_skips_management_group_when_disabled(self) -> None:
+        snapshot = build_snapshot(observation=None)
+        disabled_location = build_location(
+            [
+                "weather_forecast",
+                "warnings",
+            ]
+        )
+        coordinator = build_coordinator(
+            PARSER.build_snapshot(
+                location=disabled_location,
+                observation=snapshot.observation,
+                forecast_days=snapshot.forecast_days,
+                forecast_meta=snapshot.forecast_meta,
+                alerts=snapshot.alerts,
+                alert_summary=snapshot.alert_summary,
+                last_api_call_at=snapshot.last_api_call_at,
+                last_success_at=snapshot.last_success_at,
+                is_partial=snapshot.is_partial,
+            )
+        )
+        hass = types.SimpleNamespace(
+            data={"ha_weather_jma": {"entry-123": coordinator}},
+        )
+        added_entities: list[Any] = []
+
+        asyncio.run(
+            DATETIME.async_setup_entry(
+                hass,
+                types.SimpleNamespace(entry_id="entry-123"),
+                added_entities.extend,
+            )
+        )
+
+        self.assertEqual(added_entities, [])
+
+    def test_text_platform_adds_location_controls_when_management_enabled(
+        self,
+    ) -> None:
+        snapshot = build_snapshot(observation=None)
+        coordinator = build_coordinator(snapshot)
+        hass = types.SimpleNamespace(
+            data={"ha_weather_jma": {"entry-123": coordinator}},
+        )
+        added_entities: list[Any] = []
+
+        asyncio.run(
+            TEXT.async_setup_entry(
+                hass,
+                types.SimpleNamespace(entry_id="entry-123"),
+                added_entities.extend,
+            )
+        )
+
+        values_by_entity_id = {
+            entity.entity_id: entity.native_value for entity in added_entities
+        }
+        self.assertEqual(
+            values_by_entity_id,
+            {
+                "text.ha_weather_jma_entry_123_forecast_area": (
+                    snapshot.location.forecast_area_name
+                ),
+                "text.ha_weather_jma_entry_123_observation_station": (
+                    snapshot.location.observation_station_name
+                ),
+                "text.ha_weather_jma_entry_123_warning_area": (
+                    snapshot.location.warning_area_name
+                ),
+            },
+        )
+
+        forecast_area = next(
+            entity
+            for entity in added_entities
+            if entity.entity_id == "text.ha_weather_jma_entry_123_forecast_area"
+        )
+        self.assertEqual(
+            forecast_area.extra_state_attributes["area_code"],
+            snapshot.location.forecast_area_code,
+        )
+
+    def test_text_platform_skips_management_group_when_disabled(self) -> None:
+        snapshot = build_snapshot(observation=None)
+        disabled_location = build_location(
+            [
+                "weather_forecast",
+                "warnings",
+            ]
+        )
+        coordinator = build_coordinator(
+            PARSER.build_snapshot(
+                location=disabled_location,
+                observation=snapshot.observation,
+                forecast_days=snapshot.forecast_days,
+                forecast_meta=snapshot.forecast_meta,
+                alerts=snapshot.alerts,
+                alert_summary=snapshot.alert_summary,
+                last_api_call_at=snapshot.last_api_call_at,
+                last_success_at=snapshot.last_success_at,
+                is_partial=snapshot.is_partial,
+            )
+        )
+        hass = types.SimpleNamespace(
+            data={"ha_weather_jma": {"entry-123": coordinator}},
+        )
+        added_entities: list[Any] = []
+
+        asyncio.run(
+            TEXT.async_setup_entry(
+                hass,
+                types.SimpleNamespace(entry_id="entry-123"),
+                added_entities.extend,
+            )
+        )
+
+        self.assertEqual(added_entities, [])
+
+    def test_sensor_platform_does_not_create_location_control_entities(self) -> None:
+        snapshot = build_snapshot(observation=None)
+        coordinator = build_coordinator(snapshot)
+        hass = types.SimpleNamespace(
+            data={"ha_weather_jma": {"entry-123": coordinator}},
+        )
+        added_entities: list[Any] = []
+
+        asyncio.run(
+            SENSOR.async_setup_entry(
+                hass,
+                types.SimpleNamespace(entry_id="entry-123"),
+                added_entities.extend,
+            )
+        )
+
+        entity_ids = {entity.entity_id for entity in added_entities}
+        self.assertNotIn(
+            "sensor.ha_weather_jma_entry_123_forecast_area",
+            entity_ids,
+        )
+        self.assertNotIn(
+            "sensor.ha_weather_jma_entry_123_observation_station",
+            entity_ids,
         )
 
     def test_binary_sensor_is_off_when_warning_cleared(self) -> None:

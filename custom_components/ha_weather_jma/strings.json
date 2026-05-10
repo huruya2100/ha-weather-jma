@@ -75,12 +75,6 @@
       }
     },
     "sensor": {
-      "forecast_area": {
-        "name": "Forecast area"
-      },
-      "observation_station": {
-        "name": "Observation station"
-      },
       "report_datetime": {
         "name": "Report datetime"
       },
@@ -105,14 +99,30 @@
           "danger_warning": "Danger warning",
           "emergency_warning": "Emergency warning"
         }
-      },
-      "last_api_call_at": {
-        "name": "Last API call"
       }
     },
     "button": {
       "force_refresh": {
         "name": "Force refresh"
+      }
+    },
+    "datetime": {
+      "last_api_call_at": {
+        "name": "Last API call"
+      },
+      "last_success_at": {
+        "name": "Last successful update"
+      }
+    },
+    "text": {
+      "forecast_area": {
+        "name": "Forecast area"
+      },
+      "observation_station": {
+        "name": "Observation station"
+      },
+      "warning_area": {
+        "name": "Warning area"
       }
     },
     "binary_sensor": {

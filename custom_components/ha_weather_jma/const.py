@@ -103,16 +103,18 @@ LEGACY_ENTITY_GROUP_MAP: Final[dict[str, str]] = {
 }
 
 WEATHER_ENTITY_KEY: Final = "weather"
-SENSOR_FORECAST_AREA: Final = "forecast_area"
-SENSOR_OBSERVATION_STATION: Final = "observation_station"
 SENSOR_REPORT_DATETIME: Final = "report_datetime"
 SENSOR_PUBLISHING_OFFICE: Final = "publishing_office"
 SENSOR_TODAY_PRECIP: Final = "today_precip_probability"
 SENSOR_TOMORROW_PRECIP: Final = "tomorrow_precip_probability"
 SENSOR_ALERT_SUMMARY: Final = "alert_summary"
 SENSOR_ALERT_MAX_LEVEL: Final = "alert_max_level"
-SENSOR_LAST_API_CALL_AT: Final = "last_api_call_at"
 BUTTON_FORCE_REFRESH: Final = "force_refresh"
+DATETIME_LAST_API_CALL_AT: Final = "last_api_call_at"
+DATETIME_LAST_SUCCESS_AT: Final = "last_success_at"
+TEXT_FORECAST_AREA: Final = "forecast_area"
+TEXT_OBSERVATION_STATION: Final = "observation_station"
+TEXT_WARNING_AREA: Final = "warning_area"
 
 UNKNOWN_WEATHER_CONDITION: Final = "unknown"
 
