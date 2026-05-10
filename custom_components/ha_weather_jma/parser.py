@@ -1,4 +1,4 @@
-"""Pure parsing and normalization helpers for ha-weather-jma."""
+"""気象庁ペイロードを Home Assistant 向けの値へ正規化する純粋関数群。"""
 
 from __future__ import annotations
 
@@ -72,27 +72,48 @@ _WIND_DIRECTION_DEGREES = {
     15: 338,
     16: 0,
 }
+_AMEDAS_WEATHER_TEXTS = {
+    "0": "晴",
+    "1": "曇",
+    "2": "煙霧",
+    "3": "霧",
+    "4": "降水またはしゅう雨性の降水",
+    "5": "霧雨",
+    "6": "着氷性の霧雨",
+    "7": "雨",
+    "8": "着氷性の雨",
+    "9": "みぞれ",
+    "10": "雪",
+    "11": "凍雨",
+    "12": "霧雪",
+    "13": "しゅう雨または止み間のある雨",
+    "14": "しゅう雪または止み間のある雪",
+    "15": "ひょう",
+    "16": "雷",
+    "30": "天気不明",
+    "31": "欠測",
+}
 
 
 class HaWeatherJmaParserError(ValueError):
-    """Base parser error."""
+    """パーサー系例外の基底クラス。"""
 
 
 class ForecastAreaNotFoundError(HaWeatherJmaParserError):
-    """Raised when a forecast area is not present in the payload."""
+    """予報ペイロード内に選択中の予報区が見つからない場合の例外。"""
 
 
 class ObservationUnavailableError(HaWeatherJmaParserError):
-    """Raised when a station payload is unusable."""
+    """観測所ペイロードが空、または利用できない形式だった場合の例外。"""
 
 
 class WarningAreaNotFoundError(HaWeatherJmaParserError):
-    """Raised when a warning area is not present in the payload."""
+    """警報 XML 内に選択中の警報区域が見つからない場合の例外。"""
 
 
 @dataclass(slots=True, frozen=True)
 class ForecastAreaCandidate:
-    """Forecast area candidate."""
+    """設定フローで選択肢として表示する予報区域候補。"""
 
     code: str
     name: str
@@ -106,7 +127,7 @@ class ForecastAreaCandidate:
 
 @dataclass(slots=True, frozen=True)
 class RegionCandidate:
-    """Broad region candidate derived from area.json centers."""
+    """`area.json` の center から作る広域地方候補。"""
 
     code: str
     name: str
@@ -118,7 +139,7 @@ class RegionCandidate:
 
 @dataclass(slots=True, frozen=True)
 class WarningAreaCandidate:
-    """Warning area candidate."""
+    """設定フローで選択肢として表示する警報区域候補。"""
 
     code: str
     name: str
@@ -132,7 +153,7 @@ class WarningAreaCandidate:
 
 @dataclass(slots=True, frozen=True)
 class ObservationStationCandidate:
-    """Observation station candidate."""
+    """設定フローで選択肢として表示するアメダス観測所候補。"""
 
     code: str
     name: str
@@ -146,7 +167,7 @@ class ObservationStationCandidate:
 
 @dataclass(slots=True, frozen=True)
 class LocationConfig:
-    """Normalized config entry data."""
+    """ConfigEntry の data/options を実行時用に正規化した設定値。"""
 
     entry_id: str
     entry_slug: str
@@ -169,7 +190,7 @@ class LocationConfig:
 
 @dataclass(slots=True, frozen=True)
 class ObservationSnapshot:
-    """Normalized AMeDAS observation."""
+    """単一観測所のアメダス観測値を Home Assistant 向けに正規化した値。"""
 
     observed_at: datetime | None
     temperature_c: float | None
@@ -183,7 +204,7 @@ class ObservationSnapshot:
 
 @dataclass(slots=True, frozen=True)
 class ForecastDaily:
-    """One daily forecast."""
+    """1 日分の天気予報、降水確率、気温、出典エリア情報。"""
 
     target_date: date
     condition_code: str | None
@@ -202,7 +223,7 @@ class ForecastDaily:
 
 @dataclass(slots=True, frozen=True)
 class AlertItem:
-    """One warning type/level state."""
+    """1 つの警報種別と警戒レベルの状態。"""
 
     warning_code: str | None
     warning_type: str
@@ -219,7 +240,7 @@ class AlertItem:
 
 @dataclass(slots=True, frozen=True)
 class AlertSummary:
-    """Aggregate warning state."""
+    """複数の警報 item を entity 表示用に集約した状態。"""
 
     max_level: str | None
     active_types: tuple[str, ...]
@@ -231,14 +252,14 @@ class AlertSummary:
 
 @dataclass(slots=True, frozen=True)
 class ForecastMetadata:
-    """Forecast metadata."""
+    """予報発表時刻と発表官署のメタデータ。"""
 
     report_datetime: datetime | None
     publishing_office: str | None
 
 
 class WarningXmlMetadata(TypedDict):
-    """Metadata extracted from the newest warning XML document."""
+    """最新警報 XML 文書から取り出したメタデータ。"""
 
     report_datetime: datetime | None
     publishing_office: str | None
@@ -247,7 +268,7 @@ class WarningXmlMetadata(TypedDict):
 
 @dataclass(slots=True, frozen=True)
 class CoordinatorSnapshot:
-    """Coordinator payload."""
+    """Coordinator が entity へ配布する単一の状態スナップショット。"""
 
     location: LocationConfig
     observation: ObservationSnapshot | None
@@ -263,7 +284,7 @@ class CoordinatorSnapshot:
 def build_forecast_area_candidates(
     raw: Mapping[str, Any],
 ) -> dict[str, ForecastAreaCandidate]:
-    """Build forecast area choices from area.json."""
+    """`area.json` から予報区域の選択肢を構築します。"""
     offices = _mapping(raw.get("offices"))
     class10s = _mapping(raw.get("class10s"))
     candidates: dict[str, ForecastAreaCandidate] = {}
@@ -286,7 +307,7 @@ def build_forecast_area_candidates(
 
 
 def build_region_candidates(raw: Mapping[str, Any]) -> dict[str, RegionCandidate]:
-    """Build broad region choices from area.json centers referenced by offices."""
+    """官署が参照する center だけを使って広域地方の選択肢を構築します。"""
     centers = _mapping(raw.get("centers"))
     offices = _mapping(raw.get("offices"))
     candidates: dict[str, RegionCandidate] = {}
@@ -310,7 +331,7 @@ def build_region_candidates(raw: Mapping[str, Any]) -> dict[str, RegionCandidate
 def build_warning_area_candidates(
     raw: Mapping[str, Any],
 ) -> dict[str, WarningAreaCandidate]:
-    """Build warning area choices from area.json."""
+    """`area.json` から市町村等の警報区域選択肢を構築します。"""
     candidates: dict[str, WarningAreaCandidate] = {}
     class20s = _mapping(raw.get("class20s"))
 
@@ -330,7 +351,7 @@ def build_warning_area_candidates(
 def build_observation_station_candidates(
     raw: Mapping[str, Any],
 ) -> dict[str, ObservationStationCandidate]:
-    """Build observation station choices from amedastable.json."""
+    """`amedastable.json` からアメダス観測所の選択肢を構築します。"""
     candidates: dict[str, ObservationStationCandidate] = {}
 
     for code in sorted(raw):
@@ -348,7 +369,7 @@ def build_observation_station_candidates(
 def resolve_warning_office(
     raw: Mapping[str, Any], warning_area_code: str
 ) -> tuple[str, str]:
-    """Resolve a class20 warning area to its office code and office name."""
+    """class20 警報区域から担当官署コードと官署名を解決します。"""
     class20s = _mapping(raw.get("class20s"))
     class15s = _mapping(raw.get("class15s"))
     class10s = _mapping(raw.get("class10s"))
@@ -388,7 +409,7 @@ def resolve_warning_office(
 def build_location_config(
     entry_id: str, title: str, data: Mapping[str, Any]
 ) -> LocationConfig:
-    """Normalize config entry data."""
+    """ConfigEntry の保存値を実行時に扱いやすい `LocationConfig` へ正規化します。"""
     enabled_levels = (
         tuple(
             level
@@ -434,7 +455,7 @@ def build_location_config(
 
 
 def parse_observation(raw: Mapping[str, Any], latest_time: str) -> ObservationSnapshot:
-    """Normalize a single AMeDAS station payload."""
+    """単一アメダス観測所ペイロードを `ObservationSnapshot` へ正規化します。"""
     if not raw:
         raise ObservationUnavailableError("Empty observation payload")
 
@@ -449,20 +470,12 @@ def parse_observation(raw: Mapping[str, Any], latest_time: str) -> ObservationSn
         pressure_hpa=_coerce_float(_extract_primary_value(raw.get("pressure"))),
         condition_code=text_or_none(
             _extract_primary_value(
-                _first_present(raw, "weatherCode", "conditionCode", "condition_code")
-            )
-        ),
-        condition_text=text_or_none(
-            _extract_primary_value(
                 _first_present(
-                    raw,
-                    "weather",
-                    "condition",
-                    "conditionText",
-                    "condition_text",
+                    raw, "weatherCode", "conditionCode", "condition_code", "weather"
                 )
             )
         ),
+        condition_text=_observation_condition_text(raw),
     )
 
 
@@ -471,7 +484,13 @@ def parse_forecast(
     forecast_area_code: str,
     observation_station_code: str | None = None,
 ) -> tuple[ForecastDaily, ...]:
-    """Normalize forecast JSON into daily forecasts."""
+    """気象庁予報 JSON を日別の `ForecastDaily` 一覧へ正規化します。
+
+    短期予報、週間予報、気温系列は気象庁側で粒度が異なるため、日付をキーに
+    して段階的に埋めます。週間天気が代表区域 1 件だけで配信される場合は
+    その代表区域を採用しますが、週間気温は選択中の観測所と一致する場合だけ
+    採用します。
+    """
     if not raw:
         raise ForecastAreaNotFoundError("Forecast payload is empty")
 
@@ -620,7 +639,7 @@ def forecast_supports_observation_station(
     raw: Sequence[Mapping[str, Any]],
     observation_station_code: str | None,
 ) -> bool:
-    """Return whether the forecast payload contains temperatures for the station."""
+    """予報ペイロードに指定観測所の気温系列が含まれるか返します。"""
     if observation_station_code is None:
         return False
 
@@ -630,7 +649,7 @@ def forecast_supports_observation_station(
 def extract_forecast_observation_station_codes(
     raw: Sequence[Mapping[str, Any]],
 ) -> tuple[str, ...]:
-    """Extract station codes that have temperature series in the forecast payload."""
+    """予報ペイロード内で気温系列を持つ観測所コードを抽出します。"""
     station_codes: set[str] = set()
 
     for block in raw:
@@ -654,7 +673,7 @@ def extract_forecast_observation_station_codes(
 
 
 def parse_forecast_metadata(raw: Sequence[Mapping[str, Any]]) -> ForecastMetadata:
-    """Extract forecast-level metadata."""
+    """予報ペイロード全体の発表時刻・発表官署を抽出します。"""
     block = _mapping(raw[0]) if raw else {}
     return ForecastMetadata(
         report_datetime=parse_datetime(block.get("reportDatetime")),
@@ -667,10 +686,11 @@ def parse_alerts_xml(
     warning_area_code: str,
     warning_area_name: str,
 ) -> dict[tuple[str, str], AlertItem]:
-    """Normalize warning XML documents into fixed alert items.
+    """警報 XML 文書群を固定キーの `AlertItem` 辞書へ正規化します。
 
-    Warning parsing is XML-first so the integration can follow the 2026
-    warning-system products and status transitions directly from JMAXML.
+    2026 年警報体系のプロダクトと状態遷移を JMAXML から直接追うため、
+    実行時の警報処理は XML を正とします。選択中の市町村等区域に一致する
+    `Item` だけを読み、気象庁コードを統合内の警報種別・警戒レベルへ変換します。
     """
     documents = [text for text in raw_documents if text and text.strip()]
     if not documents:
@@ -751,7 +771,7 @@ def build_default_alerts(
     headline_text: str | None,
     unavailable: bool,
 ) -> dict[tuple[str, str], AlertItem]:
-    """Build the fixed alert key space."""
+    """全警報 entity 分の固定キー空間を既定状態で作ります。"""
     state = None if unavailable else False
     status_text = None if unavailable else "対象外"
     return {
@@ -773,7 +793,7 @@ def build_default_alerts(
 
 
 def build_alert_summary(alerts: Mapping[tuple[str, str], AlertItem]) -> AlertSummary:
-    """Aggregate alert items."""
+    """個別警報状態から最大レベルや発表中タイトルを集約します。"""
     items = list(alerts.values())
     if items and all(item.is_active is None for item in items):
         reference = items[0]
@@ -830,7 +850,7 @@ def build_snapshot(
     last_success_at: datetime | None,
     is_partial: bool,
 ) -> CoordinatorSnapshot:
-    """Build the coordinator snapshot."""
+    """Coordinator が配布する不変スナップショットを構築します。"""
     return CoordinatorSnapshot(
         location=location,
         observation=observation,
@@ -845,12 +865,12 @@ def build_snapshot(
 
 
 def warning_entity_title(warning_type: str, level: str) -> str:
-    """Return the display title for a warning entity."""
+    """警報種別と警戒レベルから entity 表示名を返します。"""
     return WARNING_ENTITY_TITLES[(warning_type, level)]
 
 
 def map_condition_to_ha(condition_code: str | None, condition_text: str | None) -> str:
-    """Map JMA values to Home Assistant weather conditions."""
+    """気象庁の天気コード・本文を Home Assistant の weather condition に変換します。"""
     text = (condition_text or "").replace("　", " ")
     if "雷" in text and ("雨" in text or "雪" in text):
         return "lightning-rainy"
@@ -887,7 +907,7 @@ def resolve_weather_condition(
     observation: ObservationSnapshot | None,
     forecast_days: Iterable[ForecastDaily],
 ) -> tuple[str, str | None]:
-    """Resolve the weather condition using the documented priority."""
+    """観測値を優先し、不明な場合は今日の予報から天気状態を決定します。"""
     if observation is not None:
         condition = map_condition_to_ha(
             observation.condition_code, observation.condition_text
@@ -910,13 +930,13 @@ def resolve_weather_condition(
 def first_two_forecast_days(
     forecast_days: Iterable[ForecastDaily],
 ) -> tuple[ForecastDaily | None, ForecastDaily | None]:
-    """Return the first two forecast days."""
+    """日別予報から今日・明日に相当する先頭 2 件を返します。"""
     items = list(forecast_days)
     return (items[0] if items else None, items[1] if len(items) > 1 else None)
 
 
 def forecast_datetime_utc(target_date: date) -> str:
-    """Return a UTC RFC3339 string for daily forecast timestamps."""
+    """日別予報の日付を Home Assistant 用 UTC RFC3339 文字列へ変換します。"""
     return (
         datetime.combine(target_date, time.min, tzinfo=_JST)
         .astimezone(timezone.utc)
@@ -925,14 +945,14 @@ def forecast_datetime_utc(target_date: date) -> str:
 
 
 def slugify_name(value: str) -> str:
-    """Convert a string to a simple slug."""
+    """表示名を entity_id 生成に使える単純な ASCII slug へ変換します。"""
     normalized = unicodedata.normalize("NFKD", value)
     ascii_value = normalized.encode("ascii", "ignore").decode("ascii").lower()
     return re.sub(r"[^a-z0-9]+", "_", ascii_value).strip("_")
 
 
 def parse_datetime(value: Any) -> datetime | None:
-    """Parse an ISO 8601 datetime string."""
+    """ISO 8601 風の日時文字列を `datetime` に変換します。失敗時は `None`。"""
     if value in (None, ""):
         return None
     text = str(value).strip()
@@ -945,7 +965,7 @@ def parse_datetime(value: Any) -> datetime | None:
 
 
 def text_or_none(value: Any) -> str | None:
-    """Convert a value to a trimmed string or None."""
+    """値を trim 済み文字列へ変換し、空なら `None` を返します。"""
     if value is None:
         return None
     text = str(value).strip()
@@ -953,6 +973,7 @@ def text_or_none(value: Any) -> str | None:
 
 
 def _should_replace_alert(existing: AlertItem, new_item: AlertItem) -> bool:
+    """同一警報キーで既存 item を新 item に置き換えるべきか判定します。"""
     if existing.warning_code is None:
         return True
     if (
@@ -969,6 +990,7 @@ def _should_replace_alert(existing: AlertItem, new_item: AlertItem) -> bool:
 
 
 def _alert_state_rank(value: bool | None) -> int:
+    """警報状態の優先度を比較用の整数に変換します。"""
     if value is True:
         return 3
     if value is None:
@@ -977,6 +999,7 @@ def _alert_state_rank(value: bool | None) -> int:
 
 
 def _warning_status_to_state(status_text: str | None) -> bool | None:
+    """JMAXML の状態文言を active/inactive/unknown に変換します。"""
     if status_text in ACTIVE_WARNING_STATUSES:
         return True
     if status_text in INACTIVE_WARNING_STATUSES:
@@ -996,6 +1019,7 @@ def _find_time_series(
     block: Mapping[str, Any],
     required_area_keys: set[str],
 ) -> Mapping[str, Any] | None:
+    """指定キー群を持つ area を含む timeSeries を探します。"""
     for series in _iter_mappings(block.get("timeSeries")):
         areas = list(_iter_mappings(series.get("areas")))
         if areas and required_area_keys.issubset(set(areas[0].keys())):
@@ -1006,6 +1030,7 @@ def _find_time_series(
 def _find_area(
     series: Mapping[str, Any] | None, target_code: str | None
 ) -> Mapping[str, Any] | None:
+    """timeSeries 内から対象 area code に一致する area を探します。"""
     if series is None or target_code is None:
         return None
     for area in _iter_mappings(series.get("areas")):
@@ -1017,6 +1042,7 @@ def _find_area(
 def _find_area_or_single_area(
     series: Mapping[str, Any] | None, target_code: str | None
 ) -> Mapping[str, Any] | None:
+    """完全一致 area を探し、なければ代表区域 1 件だけの系列を採用します。"""
     exact_area = _find_area(series, target_code)
     if exact_area is not None or series is None:
         return exact_area
@@ -1028,37 +1054,56 @@ def _find_area_or_single_area(
 
 
 def _area_code(area: Mapping[str, Any] | None) -> str | None:
+    """気象庁 area ブロックから code を安全に取り出します。"""
     return text_or_none(_mapping(_mapping(area).get("area")).get("code"))
 
 
 def _area_name(area: Mapping[str, Any] | None) -> str | None:
+    """気象庁 area ブロックから name を安全に取り出します。"""
     return text_or_none(_mapping(_mapping(area).get("area")).get("name"))
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:
+    """値が Mapping でなければ空 Mapping として扱います。"""
     return value if isinstance(value, Mapping) else {}
 
 
 def _first_present(mapping: Mapping[str, Any], *keys: str) -> Any:
+    """候補キーのうち最初に存在する値を返します。"""
     for key in keys:
         if key in mapping:
             return mapping[key]
     return None
 
 
+def _observation_condition_text(raw: Mapping[str, Any]) -> str | None:
+    """アメダス観測の天気本文を取り出します。数値 weather は本文として扱いません。"""
+    for key in ("condition", "conditionText", "condition_text", "weather"):
+        value = text_or_none(_extract_primary_value(raw.get(key)))
+        if value is None:
+            continue
+        if key == "weather" and value in _AMEDAS_WEATHER_TEXTS:
+            return _AMEDAS_WEATHER_TEXTS[value]
+        return value
+    return None
+
+
 def _iter_mappings(value: Any) -> Iterable[Mapping[str, Any]]:
+    """list 内の Mapping 要素だけを反復します。"""
     if not isinstance(value, list):
         return ()
     return (item for item in value if isinstance(item, Mapping))
 
 
 def _iter_strings(value: Any) -> list[str]:
+    """list 要素を文字列化して返します。list でなければ空です。"""
     if not isinstance(value, list):
         return []
     return [str(item) for item in value]
 
 
 def _coerce_int(value: Any) -> int | None:
+    """値を int に丸めて変換します。変換不能なら `None`。"""
     if value in (None, ""):
         return None
     try:
@@ -1068,6 +1113,7 @@ def _coerce_int(value: Any) -> int | None:
 
 
 def _coerce_float(value: Any) -> float | None:
+    """値を float に変換します。変換不能なら `None`。"""
     if value in (None, ""):
         return None
     try:
@@ -1077,6 +1123,7 @@ def _coerce_float(value: Any) -> float | None:
 
 
 def _coerce_lat_lon(value: Any) -> float | None:
+    """気象庁の `[度, 分]` 形式を十進緯度経度へ変換します。"""
     if not isinstance(value, list) or len(value) < 2:
         return None
     degrees = _coerce_float(value[0])
@@ -1087,18 +1134,21 @@ def _coerce_lat_lon(value: Any) -> float | None:
 
 
 def _extract_primary_value(value: Any) -> Any:
+    """気象庁配列値の先頭要素を主値として取り出します。"""
     if isinstance(value, list):
         return value[0] if value else None
     return value
 
 
 def _wind_code_to_degrees(code: int | None) -> int | None:
+    """アメダス風向コードを方位角へ変換します。"""
     if code is None:
         return None
     return _WIND_DIRECTION_DEGREES.get(code)
 
 
 def _xml_find_text(element: ET.Element, path: str) -> str | None:
+    """XML 要素から XPath に一致するテキストを安全に取得します。"""
     target = element.find(path)
     if target is None or target.text is None:
         return None
@@ -1108,6 +1158,7 @@ def _xml_find_text(element: ET.Element, path: str) -> str | None:
 def _latest_warning_xml_metadata(
     raw_documents: Iterable[str],
 ) -> WarningXmlMetadata:
+    """複数 XML 文書のうち最新発表時刻のメタデータを返します。"""
     latest_key: datetime | None = None
     latest_meta: WarningXmlMetadata = {
         "report_datetime": None,

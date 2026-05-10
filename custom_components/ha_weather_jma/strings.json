@@ -108,19 +108,17 @@
       },
       "warning_area": {
         "name": "Warning area"
-      }
-    },
-    "button": {
-      "force_refresh": {
-        "name": "Force refresh"
-      }
-    },
-    "datetime": {
+      },
       "last_api_call_at": {
         "name": "Last API call"
       },
       "last_success_at": {
         "name": "Last successful update"
+      }
+    },
+    "button": {
+      "force_refresh": {
+        "name": "Force refresh"
       }
     },
     "binary_sensor": {

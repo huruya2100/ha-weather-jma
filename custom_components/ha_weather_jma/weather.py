@@ -1,4 +1,4 @@
-"""Weather platform for ha-weather-jma."""
+"""Home Assistant の weather platform 実装。"""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the weather platform."""
+    """設定に応じて天気 entity を Home Assistant へ登録します。"""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     if ENTITY_GROUP_WEATHER_FORECAST not in coordinator.location.enabled_entity_groups:
         async_add_entities([])
@@ -42,7 +42,7 @@ async def async_setup_entry(
 
 
 class HaWeatherJmaEntity(HaWeatherJmaBaseEntity, WeatherEntity):
-    """Main ha-weather-jma weather entity."""
+    """現在天気と日別予報を公開するメイン weather entity。"""
 
     _attr_supported_features = WeatherEntityFeature.FORECAST_DAILY
     _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
@@ -58,6 +58,7 @@ class HaWeatherJmaEntity(HaWeatherJmaBaseEntity, WeatherEntity):
 
     @property
     def condition(self) -> str:
+        """観測値を優先し、なければ予報から現在天気状態を返します。"""
         condition, _ = resolve_weather_condition(
             self.snapshot.observation, self.snapshot.forecast_days
         )
@@ -65,31 +66,44 @@ class HaWeatherJmaEntity(HaWeatherJmaBaseEntity, WeatherEntity):
 
     @property
     def native_temperature(self) -> float | None:
+        """アメダス観測の気温を摂氏で返します。"""
         observation = self.snapshot.observation
         return observation.temperature_c if observation is not None else None
 
     @property
     def humidity(self) -> int | None:
+        """アメダス観測の湿度をパーセントで返します。"""
         observation = self.snapshot.observation
         return observation.humidity_percent if observation is not None else None
 
     @property
     def native_pressure(self) -> float | None:
+        """アメダス観測の現地気圧を hPa で返します。"""
         observation = self.snapshot.observation
         return observation.pressure_hpa if observation is not None else None
 
     @property
     def native_wind_speed(self) -> float | None:
+        """アメダス観測の風速を m/s で返します。"""
         observation = self.snapshot.observation
         return observation.wind_speed_ms if observation is not None else None
 
     @property
     def wind_bearing(self) -> int | None:
+        """アメダス風向コードを方位角にした値を返します。"""
         observation = self.snapshot.observation
         return observation.wind_direction_deg if observation is not None else None
 
     async def async_forecast_daily(self) -> list[dict[str, Any]] | None:
-        """Return the daily forecast."""
+        """Home Assistant の daily forecast 形式で日別予報を返します。"""
+        complete_days = []
+        for day in self.snapshot.forecast_days:
+            if day.temp_max_c is None or day.temp_min_c is None:
+                if complete_days:
+                    break
+                continue
+            complete_days.append(day)
+
         return [
             {
                 "datetime": forecast_datetime_utc(day.target_date),
@@ -100,11 +114,12 @@ class HaWeatherJmaEntity(HaWeatherJmaBaseEntity, WeatherEntity):
                 "native_templow": day.temp_min_c,
                 "precipitation_probability": day.precip_probability_percent,
             }
-            for day in self.snapshot.forecast_days
+            for day in complete_days
         ]
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        """地域情報、発表情報、生の天気文言を属性として返します。"""
         attributes = self._base_location_attributes()
         attributes.update(
             {
@@ -122,6 +137,7 @@ class HaWeatherJmaEntity(HaWeatherJmaBaseEntity, WeatherEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        """Coordinator 更新時に weather forecast listener へも通知します。"""
         super()._handle_coordinator_update()
         if self.hass is not None:
             self.hass.async_create_task(self.async_update_listeners(("daily",)))

@@ -1,4 +1,4 @@
-"""Binary sensor platform for ha-weather-jma."""
+"""Home Assistant の binary_sensor platform 実装。"""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the binary sensor platform."""
+    """設定で有効な警報レベルの binary sensor を登録します。"""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     if ENTITY_GROUP_WARNINGS not in coordinator.location.enabled_entity_groups:
         async_add_entities([])
@@ -44,7 +44,7 @@ async def async_setup_entry(
 
 
 class HaWeatherJmaWarningBinarySensor(HaWeatherJmaBaseEntity, BinarySensorEntity):
-    """Fixed warning type/level binary sensor."""
+    """警報種別と警戒レベルの 1 組に対応する固定 binary sensor。"""
 
     _attr_device_class = BinarySensorDeviceClass.SAFETY
     _attr_translation_key = "warning_status"
@@ -67,11 +67,13 @@ class HaWeatherJmaWarningBinarySensor(HaWeatherJmaBaseEntity, BinarySensorEntity
 
     @property
     def is_on(self) -> bool | None:
+        """対象警報が発表中なら True、解除なら False、不明なら None を返します。"""
         item = self.snapshot.alerts[(self._warning_type, self._level)]
         return item.is_active
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        """警報コード、発表時刻、見出しなどの詳細属性を返します。"""
         item = self.snapshot.alerts[(self._warning_type, self._level)]
         return {
             "area_code": item.area_code,

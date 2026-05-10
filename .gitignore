@@ -155,3 +155,4 @@ cython_debug/
 
 # LSP config files
 pyrightconfig.json
+CODE_DOCUMENTATION.ja.md

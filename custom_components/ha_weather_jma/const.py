@@ -1,4 +1,9 @@
-"""Constants for the ha-weather-jma integration."""
+"""ha-weather-jma 全体で共有する定数。
+
+気象庁 URL、設定キー、entity グループ、警報コード対応表をここに集約します。
+警報コード対応表は JMAXML のコードを Home Assistant 側の安定した
+`warning_type` と `level` に変換するための境界です。
+"""
 
 from __future__ import annotations
 
@@ -109,6 +114,8 @@ SENSOR_TODAY_PRECIP: Final = "today_precip_probability"
 SENSOR_TOMORROW_PRECIP: Final = "tomorrow_precip_probability"
 SENSOR_ALERT_SUMMARY: Final = "alert_summary"
 SENSOR_ALERT_MAX_LEVEL: Final = "alert_max_level"
+SENSOR_LAST_API_CALL_AT: Final = "last_api_call_at"
+SENSOR_LAST_SUCCESS_AT: Final = "last_success_at"
 BUTTON_FORCE_REFRESH: Final = "force_refresh"
 DATETIME_LAST_API_CALL_AT: Final = "last_api_call_at"
 DATETIME_LAST_SUCCESS_AT: Final = "last_success_at"
@@ -118,8 +125,8 @@ TEXT_WARNING_AREA: Final = "warning_area"
 
 UNKNOWN_WEATHER_CONDITION: Final = "unknown"
 
-# Limit entity definitions to the combinations that currently exist in JMA's
-# published warning/advisory taxonomy.
+# 気象庁が公開している注意報・警報体系に実在する組み合わせだけ entity 化します。
+# ここにない組み合わせを作ると、常に「対象外」の entity が増えて利用者を迷わせます。
 WARNING_ENTITY_TITLES: Final[dict[tuple[str, str], str]] = {
     ("blizzard", LEVEL_ADVISORY): "レベル２風雪注意報",
     ("blizzard", LEVEL_WARNING): "レベル３暴風雪警報",

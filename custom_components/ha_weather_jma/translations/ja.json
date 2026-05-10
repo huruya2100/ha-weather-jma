@@ -108,19 +108,17 @@
       },
       "warning_area": {
         "name": "警報地域"
-      }
-    },
-    "button": {
-      "force_refresh": {
-        "name": "強制再取得"
-      }
-    },
-    "datetime": {
+      },
       "last_api_call_at": {
         "name": "最終APIコール時刻"
       },
       "last_success_at": {
         "name": "最終取得成功時刻"
+      }
+    },
+    "button": {
+      "force_refresh": {
+        "name": "強制再取得"
       }
     },
     "binary_sensor": {

@@ -1,4 +1,4 @@
-"""Button platform for ha-weather-jma."""
+"""Home Assistant の button platform 実装。"""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the button platform."""
+    """管理グループが有効な場合に手動更新ボタンを登録します。"""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     if ENTITY_GROUP_MANAGEMENT not in coordinator.location.enabled_entity_groups:
         return
@@ -34,7 +34,7 @@ async def async_setup_entry(
 
 
 class HaWeatherJmaForceRefreshButtonEntity(HaWeatherJmaBaseEntity, ButtonEntity):
-    """Button entity that triggers an immediate refresh."""
+    """Coordinator の即時更新を要求する管理用ボタン entity。"""
 
     entity_description = ButtonEntityDescription(
         key=BUTTON_FORCE_REFRESH,
@@ -49,11 +49,12 @@ class HaWeatherJmaForceRefreshButtonEntity(HaWeatherJmaBaseEntity, ButtonEntity)
         self._attr_translation_key = BUTTON_FORCE_REFRESH
 
     async def async_press(self) -> None:
-        """Trigger an immediate refresh."""
+        """ボタン押下時に coordinator の即時更新を要求します。"""
         await self.coordinator.async_request_refresh()
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        """設定値と最終更新時刻を管理用属性として返します。"""
         return {
             "forecast_area_name": self.location.forecast_area_name,
             "forecast_area_code": self.location.forecast_area_code,

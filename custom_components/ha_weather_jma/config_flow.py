@@ -1,4 +1,4 @@
-"""Config flow for ha-weather-jma."""
+"""Home Assistant UI から地域・観測所・警報区域を選ぶ設定フロー。"""
 
 # mypy: disable-error-code=call-arg
 
@@ -95,7 +95,7 @@ def build_options_schema(
     default_entity_groups: list[str],
     default_name: str | None = None,
 ) -> vol.Schema:
-    """Build the shared create/options form schema."""
+    """新規作成と options flow で共有する設定フォーム schema を構築します。"""
     schema_fields: dict[Any, Any] = {
         vol.Required(
             CONF_UPDATE_INTERVAL_MINUTES,
@@ -125,7 +125,12 @@ def build_options_schema(
 
 
 class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Config flow for ha-weather-jma."""
+    """初回セットアップ用の段階式 ConfigFlow。
+
+    広域地方 -> 予報区域 -> 観測所 -> 警報区域 -> 表示/生成オプションの順に
+    選択します。候補が多すぎる場合に Home Assistant の select が重くならないよう、
+    各ステップに検索フィルタ入力を持たせています。
+    """
 
     VERSION = 1
 
@@ -141,7 +146,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._entry_data: ConfigFlowInput = {}
 
     async def async_step_user(self, user_input: ConfigFlowInput | None = None):
-        """Select the broad region."""
+        """広域地方を選択します。"""
         errors: dict[str, str] = {}
         try:
             candidates = await self._async_get_region_candidates()
@@ -177,7 +182,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         user_input: ConfigFlowInput | None = None,
     ):
-        """Select the forecast area."""
+        """天気予報に使う予報区域を選択します。"""
         errors: dict[str, str] = {}
         try:
             candidates = await self._async_get_forecast_candidates()
@@ -221,7 +226,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         user_input: ConfigFlowInput | None = None,
     ):
-        """Select the observation station."""
+        """現在値と気温予報の基準になるアメダス観測所を選択します。"""
         errors: dict[str, str] = {}
         try:
             candidates = await self._async_get_observation_candidates()
@@ -260,7 +265,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_warning(self, user_input: ConfigFlowInput | None = None):
-        """Select the warning area."""
+        """注意報・警報を監視する市町村等区域を選択します。"""
         errors: dict[str, str] = {}
         try:
             candidates = await self._async_get_warning_candidates()
@@ -298,7 +303,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_options(self, user_input: ConfigFlowInput | None = None):
-        """Enter the remaining options and create the entry."""
+        """表示名、更新間隔、生成する entity グループを確定して entry を作ります。"""
         errors: dict[str, str] = {}
         default_name = self._entry_data.get(CONF_FORECAST_AREA_NAME, DOMAIN)
 
@@ -337,10 +342,11 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(
         entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
-        """Return the options flow handler."""
+        """既存 entry 用の options flow handler を返します。"""
         return HaWeatherJmaOptionsFlow(entry)
 
     def _build_final_options_schema(self, *, default_name: str) -> vol.Schema:
+        """初回作成の最終ステップ用 schema を構築します。"""
         return build_options_schema(
             default_name=default_name,
             default_update_interval=DEFAULT_UPDATE_INTERVAL_MINUTES,
@@ -352,6 +358,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         user_input: ConfigFlowInput,
     ) -> tuple[ConfigFlowInput, dict[str, str]]:
+        """最終フォーム入力を保存形式へ正規化し、矛盾を検証します。"""
         errors: dict[str, str] = {}
         enabled_levels = [
             level
@@ -379,6 +386,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _async_get_region_candidates(self) -> dict[str, RegionCandidate]:
+        """地域候補を API から取得し、flow 内で再利用できるよう保持します。"""
         if not self._region_candidates:
             area_data = await self._get_api_client().fetch_area_definitions()
             self._region_candidates = build_region_candidates(area_data)
@@ -389,6 +397,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self._region_candidates
 
     async def _async_get_forecast_candidates(self) -> dict[str, ForecastAreaCandidate]:
+        """選択済み地域に属する予報区域候補を返します。"""
         region_code = self._entry_data.get(CONF_REGION_CODE)
         if not self._forecast_candidates:
             area_data = await self._get_api_client().fetch_area_definitions()
@@ -409,6 +418,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _async_get_station_candidates(
         self,
     ) -> dict[str, ObservationStationCandidate]:
+        """全アメダス観測所候補を取得・キャッシュします。"""
         if not self._station_candidates:
             station_data = await self._get_api_client().fetch_amedas_table()
             self._station_candidates = build_observation_station_candidates(
@@ -419,6 +429,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _async_get_observation_candidates(
         self,
     ) -> dict[str, ObservationStationCandidate]:
+        """予報気温に対応する観測所と近傍観測所を優先して候補化します。"""
         if self._observation_candidates:
             return self._observation_candidates
 
@@ -446,6 +457,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self._observation_candidates
 
     async def _async_get_warning_candidates(self) -> dict[str, WarningAreaCandidate]:
+        """選択済み予報官署に属する警報区域候補を返します。"""
         if not self._warning_candidates:
             area_data = await self._get_api_client().fetch_area_definitions()
             self._warning_candidates = build_warning_area_candidates(area_data)
@@ -459,16 +471,19 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
 
     def _get_api_client(self) -> HaWeatherJmaApiClient:
+        """ConfigFlow 用 API クライアントを遅延生成して再利用します。"""
         if self._api_client is None:
             self._api_client = HaWeatherJmaApiClient(async_get_clientsession(self.hass))
         return self._api_client
 
     async def _async_fetch_forecast_for_validation(self) -> list[dict[str, Any]]:
+        """観測所候補の絞り込みに使う予報 JSON を取得します。"""
         return await self._get_api_client().fetch_forecast(
             self._entry_data[CONF_FORECAST_OFFICE_CODE]
         )
 
     def _show_connect_error(self, step_id: str):
+        """通信・解析失敗時に現在ステップへ接続エラーを表示します。"""
         return self.async_show_form(
             step_id=step_id,
             data_schema=vol.Schema({}),
@@ -480,6 +495,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         field_name: str,
         candidates: CandidateMap,
     ) -> tuple[vol.Schema, str | None]:
+        """大量候補を検索フィルタ付き select schema に変換します。"""
         filter_field = FILTER_FIELD_MAP[field_name]
         filter_value = self._candidate_filters.get(field_name, "")
         filtered_candidates = self._filter_candidates(candidates, filter_value)
@@ -505,6 +521,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         field_name: str,
         user_input: ConfigFlowInput | None,
     ) -> None:
+        """フォーム入力から候補検索フィルタを更新します。"""
         if user_input is None:
             return
         filter_field = FILTER_FIELD_MAP[field_name]
@@ -517,6 +534,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         candidates: CandidateMap,
         filter_value: str,
     ) -> CandidateMap:
+        """候補の表示名・コード・官署名を正規化文字列で部分一致検索します。"""
         normalized_filter = self._normalize_search_text(filter_value)
         if not normalized_filter:
             return candidates
@@ -536,6 +554,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             | WarningAreaCandidate
         ),
     ) -> str:
+        """候補検索に使う正規化済み文字列を作ります。"""
         parts = [candidate.display_label, candidate.code, candidate.name]
         if isinstance(candidate, ForecastAreaCandidate | WarningAreaCandidate):
             parts.extend((candidate.office_code, candidate.office_name))
@@ -546,12 +565,14 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         candidate: ForecastAreaCandidate,
         region_code: str,
     ) -> bool:
+        """予報区域候補が選択済み広域地方に属するか判定します。"""
         office_region_code = self._office_region_codes.get(candidate.office_code)
         if office_region_code is None:
             return True
         return office_region_code == region_code
 
     def _normalize_search_text(self, value: str) -> str:
+        """検索文字列を NFKC + casefold で比較しやすくします。"""
         return unicodedata.normalize("NFKC", value).casefold().strip()
 
     def _build_nearby_observation_candidates(
@@ -559,6 +580,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         all_candidates: Mapping[str, ObservationStationCandidate],
         supported_candidates: Mapping[str, ObservationStationCandidate],
     ) -> dict[str, ObservationStationCandidate]:
+        """予報対応観測所から近い観測所を補助候補として作ります。"""
         reference_points = [
             candidate
             for candidate in supported_candidates.values()
@@ -608,6 +630,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         latitude_2: float,
         longitude_2: float,
     ) -> float:
+        """2 点間の概算距離を haversine 公式で km 単位にします。"""
         lat_1 = math.radians(latitude_1)
         lon_1 = math.radians(longitude_1)
         lat_2 = math.radians(latitude_2)
@@ -629,13 +652,13 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class HaWeatherJmaOptionsFlow(config_entries.OptionsFlow):
-    """Options flow for ha-weather-jma."""
+    """既存 entry の更新間隔・生成 entity を変更する options flow。"""
 
     def __init__(self, entry: config_entries.ConfigEntry) -> None:
         self._entry = entry
 
     async def async_step_init(self, user_input: ConfigFlowInput | None = None):
-        """Manage integration options."""
+        """既存 entry のオプションを表示・保存します。"""
         errors: dict[str, str] = {}
 
         if user_input is not None:

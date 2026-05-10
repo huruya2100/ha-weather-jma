@@ -1,4 +1,4 @@
-"""Update coordinator for ha-weather-jma."""
+"""気象庁データをまとめて更新する DataUpdateCoordinator 実装。"""
 
 from __future__ import annotations
 
@@ -37,7 +37,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class HaWeatherJmaCoordinator(DataUpdateCoordinator[CoordinatorSnapshot]):
-    """Coordinate updates from JMA APIs."""
+    """複数の気象庁 API を 1 つのスナップショットへ束ねる更新 coordinator。
+
+    Home Assistant の各 entity は直接 API を呼ばず、この coordinator が作る
+    `CoordinatorSnapshot` だけを読みます。これにより、予報・観測・警報の
+    どれか一部が失敗しても、前回値の再利用や unavailable 表現を一箇所で
+    管理できます。
+    """
 
     def __init__(
         self,
@@ -56,9 +62,16 @@ class HaWeatherJmaCoordinator(DataUpdateCoordinator[CoordinatorSnapshot]):
         self.update_interval = self._suggest_interval()
 
     def _suggest_interval(self) -> timedelta:
+        """設定された分単位の更新間隔を Home Assistant 用 timedelta に変換します。"""
         return timedelta(minutes=self.location.update_interval_minutes)
 
     async def _async_update_data(self) -> CoordinatorSnapshot:
+        """気象庁 API を並列更新し、entity が読む正規化済み状態を返します。
+
+        予報・観測・警報は独立したデータ源なので、単独の失敗では統合全体を
+        落としません。全データ源が失敗した場合のみ、初回更新では `UpdateFailed`
+        を投げ、2 回目以降は前回スナップショットを partial として再利用します。
+        """
         previous = self.data if isinstance(self.data, CoordinatorSnapshot) else None
         requested_at = datetime.now(timezone.utc)
 

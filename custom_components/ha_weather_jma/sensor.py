@@ -1,4 +1,4 @@
-"""Sensor platform for ha-weather-jma."""
+"""Home Assistant の sensor platform 実装。"""
 
 from __future__ import annotations
 
@@ -23,6 +23,8 @@ from .const import (
     ENTITY_GROUP_WEATHER_FORECAST,
     SENSOR_ALERT_MAX_LEVEL,
     SENSOR_ALERT_SUMMARY,
+    SENSOR_LAST_API_CALL_AT,
+    SENSOR_LAST_SUCCESS_AT,
     SENSOR_PUBLISHING_OFFICE,
     SENSOR_REPORT_DATETIME,
     SENSOR_TODAY_PRECIP,
@@ -41,7 +43,7 @@ AttrReader = Callable[[CoordinatorSnapshot], dict[str, Any]]
 
 @dataclass(slots=True, frozen=True, kw_only=True)
 class HaWeatherJmaSensorDescription(SensorEntityDescription):
-    """ha-weather-jma sensor description."""
+    """値取得関数と属性取得関数を持つ sensor 定義。"""
 
     entity_group: str
     value_fn: StateReader
@@ -49,36 +51,44 @@ class HaWeatherJmaSensorDescription(SensorEntityDescription):
 
 
 def _today(snapshot: CoordinatorSnapshot) -> ForecastDaily | None:
+    """スナップショット内の日別予報から先頭日を返します。"""
     return first_two_forecast_days(snapshot.forecast_days)[0]
 
 
 def _tomorrow(snapshot: CoordinatorSnapshot) -> ForecastDaily | None:
+    """スナップショット内の日別予報から 2 日目を返します。"""
     return first_two_forecast_days(snapshot.forecast_days)[1]
 
 
 def _target_date_attributes(day: ForecastDaily | None) -> dict[str, Any]:
+    """日別 sensor に付ける対象日属性を組み立てます。"""
     return {"target_date": day.target_date.isoformat() if day is not None else None}
 
 
 def _today_precip_probability(snapshot: CoordinatorSnapshot) -> int | None:
+    """今日の降水確率を返します。"""
     day = _today(snapshot)
     return day.precip_probability_percent if day is not None else None
 
 
 def _tomorrow_precip_probability(snapshot: CoordinatorSnapshot) -> int | None:
+    """明日の降水確率を返します。"""
     day = _tomorrow(snapshot)
     return day.precip_probability_percent if day is not None else None
 
 
 def _today_attributes(snapshot: CoordinatorSnapshot) -> dict[str, Any]:
+    """今日 sensor の属性を返します。"""
     return _target_date_attributes(_today(snapshot))
 
 
 def _tomorrow_attributes(snapshot: CoordinatorSnapshot) -> dict[str, Any]:
+    """明日 sensor の属性を返します。"""
     return _target_date_attributes(_tomorrow(snapshot))
 
 
 def _alert_summary_value(snapshot: CoordinatorSnapshot) -> str | None:
+    """発表中警報タイトルを読める文字列へ集約します。"""
     if snapshot.alert_summary.max_level is None:
         return None
     if not snapshot.alert_summary.active_titles:
@@ -87,6 +97,7 @@ def _alert_summary_value(snapshot: CoordinatorSnapshot) -> str | None:
 
 
 def _forecast_coverage_attributes(snapshot: CoordinatorSnapshot) -> dict[str, Any]:
+    """予報データがどの区域・観測所由来かをデバッグ用属性にまとめます。"""
     return {
         "forecast_area_code": snapshot.location.forecast_area_code,
         "forecast_area_name": snapshot.location.forecast_area_name,
@@ -219,6 +230,22 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
             "office_code": snapshot.location.warning_office_code,
         },
     ),
+    HaWeatherJmaSensorDescription(
+        key=SENSOR_LAST_API_CALL_AT,
+        translation_key=SENSOR_LAST_API_CALL_AT,
+        entity_group=ENTITY_GROUP_MANAGEMENT,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda snapshot: snapshot.last_api_call_at,
+        attrs_fn=lambda snapshot: {},
+    ),
+    HaWeatherJmaSensorDescription(
+        key=SENSOR_LAST_SUCCESS_AT,
+        translation_key=SENSOR_LAST_SUCCESS_AT,
+        entity_group=ENTITY_GROUP_MANAGEMENT,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda snapshot: snapshot.last_success_at,
+        attrs_fn=lambda snapshot: {},
+    ),
 )
 
 
@@ -227,7 +254,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the sensor platform."""
+    """設定で有効な sensor entity を Home Assistant へ登録します。"""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
     for description in DESCRIPTIONS:
@@ -244,7 +271,7 @@ async def async_setup_entry(
 
 
 class HaWeatherJmaSensorEntity(HaWeatherJmaBaseEntity, SensorEntity):
-    """Coordinator-backed ha-weather-jma sensor."""
+    """Description の関数で値と属性を読む汎用 sensor entity。"""
 
     entity_description: HaWeatherJmaSensorDescription
 
@@ -264,8 +291,10 @@ class HaWeatherJmaSensorEntity(HaWeatherJmaBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> Any:
+        """スナップショットから sensor の状態値を計算します。"""
         return self.entity_description.value_fn(self.snapshot)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        """スナップショットから sensor の追加属性を計算します。"""
         return self.entity_description.attrs_fn(self.snapshot)

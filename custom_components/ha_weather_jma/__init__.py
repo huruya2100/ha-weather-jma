@@ -1,4 +1,4 @@
-"""ha-weather-jma integration."""
+"""ha-weather-jma 統合の Home Assistant エントリーポイント。"""
 
 from __future__ import annotations
 
@@ -17,12 +17,11 @@ PLATFORMS: tuple[Platform, ...] = (
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
-    Platform.DATETIME,
 )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up ha-weather-jma from a config entry."""
+    """ConfigEntry から coordinator を作成し、各 platform をセットアップします。"""
     api_client = HaWeatherJmaApiClient(async_get_clientsession(hass))
     merged_data = {**entry.data, **entry.options}
     location = build_location_config(entry.entry_id, entry.title, merged_data)
@@ -37,7 +36,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
+    """ConfigEntry の platform と coordinator をアンロードします。"""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
@@ -45,5 +44,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload the config entry after options updates."""
+    """options 更新後に ConfigEntry を再読み込みします。"""
     await hass.config_entries.async_reload(entry.entry_id)

@@ -122,6 +122,27 @@ class ParserTests(unittest.TestCase):
         self.assertIsNone(observation.condition_code)
         self.assertIsNone(observation.condition_text)
 
+    def test_parse_observation_uses_numeric_amedas_weather_as_code(self) -> None:
+        observation = PARSER.parse_observation(
+            {
+                "temp": [14.5, 0],
+                "humidity": [66, 0],
+                "windDirection": [9, 0],
+                "wind": [0.8, 0],
+                "weather": [0, 0],
+            },
+            "2026-05-11T00:00:00+09:00",
+        )
+
+        self.assertEqual(observation.condition_code, "0")
+        self.assertEqual(observation.condition_text, "晴")
+        self.assertEqual(
+            PARSER.map_condition_to_ha(
+                observation.condition_code, observation.condition_text
+            ),
+            "sunny",
+        )
+
     def test_forecast_supports_observation_station_checks_temperature_area(
         self,
     ) -> None:

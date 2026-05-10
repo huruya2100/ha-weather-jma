@@ -1,4 +1,4 @@
-"""Date/time platform for ha-weather-jma."""
+"""Home Assistant の datetime platform 実装。"""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ DateTimeReader = Callable[[CoordinatorSnapshot], datetime | None]
 
 @dataclass(slots=True, frozen=True, kw_only=True)
 class HaWeatherJmaDateTimeDescription(DateTimeEntityDescription):
-    """ha-weather-jma date/time description."""
+    """スナップショットから datetime 値を読むための entity 定義。"""
 
     value_fn: DateTimeReader
 
@@ -51,7 +51,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the date/time platform."""
+    """管理グループが有効な場合に更新時刻 datetime entity を登録します。"""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     if ENTITY_GROUP_MANAGEMENT not in coordinator.location.enabled_entity_groups:
         return
@@ -69,7 +69,7 @@ async def async_setup_entry(
 
 
 class HaWeatherJmaDateTimeEntity(HaWeatherJmaBaseEntity, DateTimeEntity):
-    """Date/time entity that reports management timestamps."""
+    """最終 API 呼び出し時刻などを表示する read-only datetime entity。"""
 
     entity_description: HaWeatherJmaDateTimeDescription
 
@@ -87,4 +87,5 @@ class HaWeatherJmaDateTimeEntity(HaWeatherJmaBaseEntity, DateTimeEntity):
 
     @property
     def native_value(self) -> datetime | None:
+        """スナップショットから datetime entity の値を返します。"""
         return self.entity_description.value_fn(self.snapshot)

@@ -1,4 +1,4 @@
-"""API client for ha-weather-jma."""
+"""気象庁の公開エンドポイントへアクセスする非同期 API クライアント。"""
 
 from __future__ import annotations
 
@@ -30,10 +30,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class HaWeatherJmaApiClient:
-    """Thin HTTP client for JMA endpoints.
+    """気象庁データ取得を担当する薄い HTTP クライアント。
 
-    Forecast and observation data come from JMA JSON endpoints.
-    Warning data is resolved from the public JMAXML Atom feeds.
+    予報・観測は JMA の JSON エンドポイントから取得し、警報は JMAXML の
+    Atom フィードから対象 XML 文書の URL を解決して取得します。このクラスは
+    Home Assistant には依存せず、通信、リトライ、定義データのキャッシュだけを
+    受け持ちます。
     """
 
     def __init__(
@@ -52,15 +54,15 @@ class HaWeatherJmaApiClient:
         self._warning_xml_urls: dict[str, dict[str, str]] = {}
 
     async def fetch_area_definitions(self) -> dict[str, Any]:
-        """Fetch and cache area.json."""
+        """地域・予報区・警報区域の定義 `area.json` を取得してキャッシュします。"""
         return await self._async_fetch_cached_json("area", AREA_URL)
 
     async def fetch_amedas_table(self) -> dict[str, Any]:
-        """Fetch and cache amedastable.json."""
+        """アメダス観測所定義 `amedastable.json` を取得してキャッシュします。"""
         return await self._async_fetch_cached_json("amedas_table", AMEDAS_TABLE_URL)
 
     async def fetch_amedas_latest_time(self) -> str:
-        """Fetch the latest AMeDAS timestamp."""
+        """アメダス観測データの最新タイムスタンプ文字列を取得します。"""
         return await self._async_fetch_text(AMEDAS_LATEST_TIME_URL)
 
     async def fetch_amedas_observation(
@@ -68,7 +70,7 @@ class HaWeatherJmaApiClient:
         station_code: str,
         observed_at: str,
     ) -> dict[str, Any]:
-        """Fetch the latest map payload and return a single station record."""
+        """指定観測所のアメダス観測値だけを最新 map ペイロードから取り出します。"""
         timestamp = (
             observed_at.strip()
             .replace("-", "")
@@ -88,7 +90,7 @@ class HaWeatherJmaApiClient:
         return dict(station)
 
     async def fetch_forecast(self, office_code: str) -> list[dict[str, Any]]:
-        """Fetch forecast JSON."""
+        """府県予報区コードに対応する天気予報 JSON を取得します。"""
         payload = await self._async_fetch_json(
             FORECAST_URL.format(office_code=office_code)
         )
@@ -97,9 +99,10 @@ class HaWeatherJmaApiClient:
         return payload
 
     async def fetch_warning_xml_documents(self, office_code: str) -> list[str]:
-        """Fetch the latest warning XML documents for one office.
+        """指定官署の最新警報 XML 文書を取得します。
 
-        This is the warning-source entrypoint used at runtime.
+        通常は短期フィードを優先し、キャッシュ済み URL が期限切れや 404 になった
+        場合はフィードを再解決して再取得します。警報処理の実行時入口です。
         """
         urls = await self._async_resolve_warning_xml_urls(office_code)
         documents, failed_product_ids = await self._async_fetch_warning_documents(urls)
@@ -130,6 +133,7 @@ class HaWeatherJmaApiClient:
     async def _async_fetch_cached_json(
         self, cache_key: str, url: str
     ) -> dict[str, Any]:
+        """定義系 JSON を TTL 付きでメモリキャッシュして取得します。"""
         cached = self._cache.get(cache_key)
         now = monotonic()
         if cached and (now - cached[0]) < DEFINITION_CACHE_TTL_SECONDS:
@@ -142,9 +146,11 @@ class HaWeatherJmaApiClient:
         return result
 
     async def _async_fetch_json(self, url: str) -> Any:
+        """共通リトライ処理を通して JSON レスポンスを取得します。"""
         return await self._async_fetch_with_retry(url, lambda response: response.json())
 
     async def _async_fetch_text(self, url: str) -> str:
+        """共通リトライ処理を通してテキストレスポンスを取得します。"""
         return await self._async_fetch_with_retry(url, lambda response: response.text())
 
     async def _async_fetch_with_retry(
@@ -152,7 +158,7 @@ class HaWeatherJmaApiClient:
         url: str,
         reader: Callable[[Any], Awaitable[Any]],
     ) -> Any:
-        """Fetch a response body using the shared retry policy."""
+        """HTTP レスポンス本文を共通リトライポリシーで取得します。"""
         for attempt in range(self._retries + 1):
             try:
                 async with asyncio.timeout(self._timeout_seconds):
@@ -186,11 +192,11 @@ class HaWeatherJmaApiClient:
                 raise
 
     async def _async_sleep_before_retry(self, attempt: int) -> None:
-        """Apply exponential backoff before the next retry attempt."""
+        """次のリトライまで指数バックオフで待機します。"""
         await asyncio.sleep(self._retry_backoff_base_seconds * (2**attempt))
 
     def _should_retry(self, attempt: int, status: int) -> bool:
-        """Return whether a response failure should be retried."""
+        """HTTP ステータスと試行回数から再試行すべきか判定します。"""
         return attempt < self._retries and (
             status >= HTTPStatus.INTERNAL_SERVER_ERROR
             or status in {HTTPStatus.NOT_FOUND, HTTPStatus.REQUEST_TIMEOUT}
@@ -201,7 +207,7 @@ class HaWeatherJmaApiClient:
         self,
         office_code: str,
     ) -> dict[str, str]:
-        """Resolve the latest warning XML URLs for one office from Atom feeds."""
+        """Atom フィードから指定官署の最新警報 XML URL を解決します。"""
         cached = dict(self._warning_xml_urls.get(office_code, {}))
         latest = await self._async_find_warning_xml_urls_in_feed(
             WARNING_XML_FEED_SHORT_URL,
@@ -224,7 +230,7 @@ class HaWeatherJmaApiClient:
         return cached
 
     async def _async_refresh_warning_xml_urls(self, office_code: str) -> dict[str, str]:
-        """Refresh warning XML URLs from feeds and drop stale cached entries."""
+        """警報 XML URL をフィードから再解決し、古いキャッシュを置き換えます。"""
         latest = await self._async_find_warning_xml_urls_in_feed(
             WARNING_XML_FEED_SHORT_URL,
             office_code,
@@ -245,6 +251,7 @@ class HaWeatherJmaApiClient:
         feed_url: str,
         office_code: str,
     ) -> dict[str, str]:
+        """1 つの Atom フィードから対応官署・対応プロダクトの XML URL を抽出します。"""
         feed_text = await self._async_fetch_text(feed_url)
         try:
             root = ET.fromstring(feed_text)
@@ -266,7 +273,7 @@ class HaWeatherJmaApiClient:
         return urls
 
     def _warning_xml_product_id(self, href: str) -> str | None:
-        """Return the supported warning product id from an XML document URL."""
+        """XML 文書 URL からこの統合が扱う警報プロダクト ID を取り出します。"""
         filename = href.rsplit("/", maxsplit=1)[-1]
         segments = filename.removesuffix(".xml").split("_")
         if len(segments) < 4:
@@ -286,7 +293,7 @@ class HaWeatherJmaApiClient:
         self,
         urls: Mapping[str, str],
     ) -> tuple[list[str], set[str]]:
-        """Fetch warning XML documents in parallel and report per-product failures."""
+        """警報 XML を並列取得し、失敗したプロダクト ID を呼び出し元へ返します。"""
         product_ids = list(urls)
         results = await asyncio.gather(
             *(self._async_fetch_text(urls[product_id]) for product_id in product_ids),
@@ -317,7 +324,7 @@ class HaWeatherJmaApiClient:
         office_code: str,
         product_ids: set[str],
     ) -> None:
-        """Remove failed warning XML URLs from the office cache."""
+        """取得に失敗した警報 XML URL を官署別キャッシュから削除します。"""
         cached = self._warning_xml_urls.get(office_code)
         if not cached:
             return
