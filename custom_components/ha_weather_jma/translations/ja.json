@@ -99,6 +99,15 @@
           "danger_warning": "危険警報",
           "emergency_warning": "特別警報"
         }
+      },
+      "forecast_area": {
+        "name": "予報対象地域"
+      },
+      "observation_station": {
+        "name": "観測所"
+      },
+      "warning_area": {
+        "name": "警報地域"
       }
     },
     "button": {
@@ -112,17 +121,6 @@
       },
       "last_success_at": {
         "name": "最終取得成功時刻"
-      }
-    },
-    "text": {
-      "forecast_area": {
-        "name": "予報対象地域"
-      },
-      "observation_station": {
-        "name": "観測所"
-      },
-      "warning_area": {
-        "name": "警報地域"
       }
     },
     "binary_sensor": {

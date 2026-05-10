@@ -18,6 +18,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
+    ENTITY_GROUP_MANAGEMENT,
     ENTITY_GROUP_WARNINGS,
     ENTITY_GROUP_WEATHER_FORECAST,
     SENSOR_ALERT_MAX_LEVEL,
@@ -26,6 +27,9 @@ from .const import (
     SENSOR_REPORT_DATETIME,
     SENSOR_TODAY_PRECIP,
     SENSOR_TOMORROW_PRECIP,
+    TEXT_FORECAST_AREA,
+    TEXT_OBSERVATION_STATION,
+    TEXT_WARNING_AREA,
 )
 from .coordinator import HaWeatherJmaCoordinator
 from .entity import HaWeatherJmaBaseEntity
@@ -82,6 +86,40 @@ def _alert_summary_value(snapshot: CoordinatorSnapshot) -> str | None:
     return "、".join(snapshot.alert_summary.active_titles)
 
 
+def _forecast_coverage_attributes(snapshot: CoordinatorSnapshot) -> dict[str, Any]:
+    return {
+        "forecast_area_code": snapshot.location.forecast_area_code,
+        "forecast_area_name": snapshot.location.forecast_area_name,
+        "observation_station_code": snapshot.location.observation_station_code,
+        "observation_station_name": snapshot.location.observation_station_name,
+        "weekly_weather_area_policy": (
+            "If JMA publishes weekly weather and precipitation for a single "
+            "representative area instead of the selected forecast area, that "
+            "representative area is used."
+        ),
+        "weekly_temperature_station_policy": (
+            "Weekly temperatures are used only when JMA publishes values for "
+            "the selected observation station. Representative stations are not "
+            "substituted."
+        ),
+        "daily_forecast_coverage": [
+            {
+                "target_date": day.target_date.isoformat(),
+                "weather_area_code": day.weather_area_code,
+                "weather_area_name": day.weather_area_name,
+                "temperature_station_code": day.temperature_station_code,
+                "temperature_station_name": day.temperature_station_name,
+                "has_weather": day.condition_code is not None,
+                "has_precip_probability": day.precip_probability_percent is not None,
+                "has_temperature": (
+                    day.temp_min_c is not None or day.temp_max_c is not None
+                ),
+            }
+            for day in snapshot.forecast_days
+        ],
+    }
+
+
 DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
     HaWeatherJmaSensorDescription(
         key=SENSOR_REPORT_DATETIME,
@@ -91,6 +129,7 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
         value_fn=lambda snapshot: snapshot.forecast_meta.report_datetime,
         attrs_fn=lambda snapshot: {
             "publishing_office": snapshot.forecast_meta.publishing_office,
+            **_forecast_coverage_attributes(snapshot),
         },
     ),
     HaWeatherJmaSensorDescription(
@@ -136,6 +175,48 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
         value_fn=lambda snapshot: snapshot.alert_summary.max_level,
         attrs_fn=lambda snapshot: {
             "active_types": list(snapshot.alert_summary.active_types),
+        },
+    ),
+    HaWeatherJmaSensorDescription(
+        key=TEXT_FORECAST_AREA,
+        translation_key=TEXT_FORECAST_AREA,
+        entity_group=ENTITY_GROUP_MANAGEMENT,
+        value_fn=lambda snapshot: snapshot.location.forecast_area_name,
+        attrs_fn=lambda snapshot: {
+            "area_code": snapshot.location.forecast_area_code,
+            "office_name": snapshot.location.forecast_office_name,
+            "office_code": snapshot.location.forecast_office_code,
+            "weekly_weather_area_policy": (
+                "If JMA publishes weekly weather and precipitation for a single "
+                "representative area instead of this forecast area, that "
+                "representative area is used."
+            ),
+        },
+    ),
+    HaWeatherJmaSensorDescription(
+        key=TEXT_OBSERVATION_STATION,
+        translation_key=TEXT_OBSERVATION_STATION,
+        entity_group=ENTITY_GROUP_MANAGEMENT,
+        value_fn=lambda snapshot: snapshot.location.observation_station_name,
+        attrs_fn=lambda snapshot: {
+            "station_code": snapshot.location.observation_station_code,
+            "latitude": snapshot.location.latitude,
+            "longitude": snapshot.location.longitude,
+            "weekly_temperature_station_policy": (
+                "Weekly temperatures are used only when JMA publishes values for "
+                "this observation station. Representative stations are not "
+                "substituted."
+            ),
+        },
+    ),
+    HaWeatherJmaSensorDescription(
+        key=TEXT_WARNING_AREA,
+        translation_key=TEXT_WARNING_AREA,
+        entity_group=ENTITY_GROUP_MANAGEMENT,
+        value_fn=lambda snapshot: snapshot.location.warning_area_name,
+        attrs_fn=lambda snapshot: {
+            "area_code": snapshot.location.warning_area_code,
+            "office_code": snapshot.location.warning_office_code,
         },
     ),
 )

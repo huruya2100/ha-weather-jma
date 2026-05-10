@@ -197,6 +197,79 @@ class ParserTests(unittest.TestCase):
         self.assertIsNone(forecast_days[0].wind_text)
         self.assertEqual(forecast_days[1].temp_max_c, 21.0)
 
+    def test_parse_forecast_uses_single_weekly_weather_area_as_regional_fallback(
+        self,
+    ) -> None:
+        forecast_data = read_fixture("forecast_normal.json")
+        forecast_data[0]["timeSeries"][0]["areas"][0]["area"] = {
+            "name": "中・西部",
+            "code": "190010",
+        }
+        forecast_data[0]["timeSeries"][1]["areas"][0]["area"] = {
+            "name": "中・西部",
+            "code": "190010",
+        }
+        forecast_data[1]["timeSeries"][0]["areas"][0]["area"] = {
+            "name": "山梨県",
+            "code": "190000",
+        }
+
+        forecast_days = PARSER.parse_forecast(
+            forecast_data,
+            "190010",
+            "44132",
+        )
+
+        self.assertEqual(len(forecast_days), 3)
+        self.assertEqual(forecast_days[2].target_date.isoformat(), "2026-04-16")
+        self.assertEqual(forecast_days[2].condition_code, "202")
+        self.assertEqual(forecast_days[2].precip_probability_percent, 50)
+        self.assertEqual(forecast_days[2].temp_min_c, 12.0)
+        self.assertEqual(forecast_days[2].temp_max_c, 23.0)
+        self.assertEqual(forecast_days[2].weather_area_code, "190000")
+        self.assertEqual(forecast_days[2].weather_area_name, "山梨県")
+        self.assertEqual(forecast_days[2].temperature_station_code, "44132")
+
+    def test_parse_forecast_does_not_guess_weekly_temperature_station(
+        self,
+    ) -> None:
+        forecast_data = read_fixture("forecast_normal.json")
+        forecast_data[0]["timeSeries"][0]["areas"][0]["area"] = {
+            "name": "与那国島地方",
+            "code": "474020",
+        }
+        forecast_data[0]["timeSeries"][1]["areas"][0]["area"] = {
+            "name": "与那国島地方",
+            "code": "474020",
+        }
+        forecast_data[0]["timeSeries"][2]["areas"][0]["area"] = {
+            "name": "与那国島",
+            "code": "94017",
+        }
+        forecast_data[1]["timeSeries"][0]["areas"][0]["area"] = {
+            "name": "八重山地方",
+            "code": "474000",
+        }
+        forecast_data[1]["timeSeries"][1]["areas"][0]["area"] = {
+            "name": "石垣島",
+            "code": "94081",
+        }
+
+        forecast_days = PARSER.parse_forecast(
+            forecast_data,
+            "474020",
+            "94017",
+        )
+
+        self.assertEqual(len(forecast_days), 3)
+        self.assertEqual(forecast_days[2].condition_code, "202")
+        self.assertEqual(forecast_days[2].precip_probability_percent, 50)
+        self.assertEqual(forecast_days[2].weather_area_code, "474000")
+        self.assertEqual(forecast_days[2].weather_area_name, "八重山地方")
+        self.assertIsNone(forecast_days[2].temp_min_c)
+        self.assertIsNone(forecast_days[2].temp_max_c)
+        self.assertIsNone(forecast_days[2].temperature_station_code)
+
     def test_parse_forecast_handles_missing_fields_empty_pop_and_negative_temp(
         self,
     ) -> None:

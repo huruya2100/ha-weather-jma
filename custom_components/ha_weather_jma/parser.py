@@ -192,6 +192,10 @@ class ForecastDaily:
     temp_min_c: float | None
     temp_max_c: float | None
     wind_text: str | None
+    weather_area_code: str | None = None
+    weather_area_name: str | None = None
+    temperature_station_code: str | None = None
+    temperature_station_name: str | None = None
     sunrise_at: datetime | None = None
     sunset_at: datetime | None = None
 
@@ -496,6 +500,8 @@ def parse_forecast(
         bucket.setdefault("condition_code", text_or_none(code))
         bucket.setdefault("condition_text", text_or_none(text))
         bucket.setdefault("wind_text", text_or_none(wind))
+        bucket.setdefault("weather_area_code", _area_code(short_weather_area))
+        bucket.setdefault("weather_area_name", _area_name(short_weather_area))
 
     short_pop_series = _find_time_series(short_block, {"pops"})
     short_pop_area = _find_area(short_pop_series, forecast_area_code)
@@ -533,11 +539,17 @@ def parse_forecast(
             bucket = by_date[dates[0].date()]
             if temps:
                 bucket["temp_min_c"] = temps[0]
+                bucket["temperature_station_code"] = _area_code(short_temp_area)
+                bucket["temperature_station_name"] = _area_name(short_temp_area)
             if len(temps) > 1:
                 bucket["temp_max_c"] = temps[1]
+                bucket["temperature_station_code"] = _area_code(short_temp_area)
+                bucket["temperature_station_name"] = _area_name(short_temp_area)
 
     weekly_weather_series = _find_time_series(weekly_block, {"weatherCodes", "pops"})
-    weekly_weather_area = _find_area(weekly_weather_series, forecast_area_code)
+    weekly_weather_area = _find_area_or_single_area(
+        weekly_weather_series, forecast_area_code
+    )
     if weekly_weather_series is not None and weekly_weather_area is not None:
         for defined_at, code, pop in zip(
             _iter_strings(weekly_weather_series.get("timeDefines")),
@@ -551,6 +563,8 @@ def parse_forecast(
             bucket = by_date[dt_value.date()]
             bucket.setdefault("condition_code", text_or_none(code))
             bucket.setdefault("precip_probability_percent", _coerce_int(pop))
+            bucket.setdefault("weather_area_code", _area_code(weekly_weather_area))
+            bucket.setdefault("weather_area_name", _area_name(weekly_weather_area))
 
     weekly_temp_series = _find_time_series(weekly_block, {"tempsMin", "tempsMax"})
     weekly_temp_area = _find_area(weekly_temp_series, observation_station_code)
@@ -567,6 +581,16 @@ def parse_forecast(
             bucket = by_date[dt_value.date()]
             bucket.setdefault("temp_min_c", _coerce_float(temp_min))
             bucket.setdefault("temp_max_c", _coerce_float(temp_max))
+            if (
+                bucket.get("temp_min_c") is not None
+                or bucket.get("temp_max_c") is not None
+            ):
+                bucket.setdefault(
+                    "temperature_station_code", _area_code(weekly_temp_area)
+                )
+                bucket.setdefault(
+                    "temperature_station_name", _area_name(weekly_temp_area)
+                )
 
     forecasts = tuple(
         ForecastDaily(
@@ -577,6 +601,10 @@ def parse_forecast(
             temp_min_c=values.get("temp_min_c"),
             temp_max_c=values.get("temp_max_c"),
             wind_text=values.get("wind_text"),
+            weather_area_code=values.get("weather_area_code"),
+            weather_area_name=values.get("weather_area_name"),
+            temperature_station_code=values.get("temperature_station_code"),
+            temperature_station_name=values.get("temperature_station_name"),
         )
         for target_date, values in sorted(by_date.items())
         if values
@@ -984,6 +1012,27 @@ def _find_area(
         if str(_mapping(area.get("area")).get("code")) == target_code:
             return area
     return None
+
+
+def _find_area_or_single_area(
+    series: Mapping[str, Any] | None, target_code: str | None
+) -> Mapping[str, Any] | None:
+    exact_area = _find_area(series, target_code)
+    if exact_area is not None or series is None:
+        return exact_area
+
+    areas = list(_iter_mappings(series.get("areas")))
+    if len(areas) == 1:
+        return areas[0]
+    return None
+
+
+def _area_code(area: Mapping[str, Any] | None) -> str | None:
+    return text_or_none(_mapping(_mapping(area).get("area")).get("code"))
+
+
+def _area_name(area: Mapping[str, Any] | None) -> str | None:
+    return text_or_none(_mapping(_mapping(area).get("area")).get("name"))
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:

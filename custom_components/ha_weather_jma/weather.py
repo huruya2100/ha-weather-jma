@@ -90,25 +90,13 @@ class HaWeatherJmaEntity(HaWeatherJmaBaseEntity, WeatherEntity):
 
     async def async_forecast_daily(self) -> list[dict[str, Any]] | None:
         """Return the daily forecast."""
-        observation = self.snapshot.observation
-        fallback_temperature = (
-            observation.temperature_c if observation is not None else None
-        )
         return [
             {
                 "datetime": forecast_datetime_utc(day.target_date),
                 "condition": map_condition_to_ha(
                     day.condition_code, day.condition_text
                 ),
-                "native_temperature": (
-                    day.temp_max_c
-                    if day.temp_max_c is not None
-                    else (
-                        day.temp_min_c
-                        if day.temp_min_c is not None
-                        else fallback_temperature
-                    )
-                ),
+                "native_temperature": day.temp_max_c,
                 "native_templow": day.temp_min_c,
                 "precipitation_probability": day.precip_probability_percent,
             }

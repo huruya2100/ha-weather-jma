@@ -69,14 +69,38 @@ After setup, the integration creates:
   precipitation probability, tomorrow's precipitation probability, alert
   summary, and alert max level
 - Binary sensor entities for each enabled warning/advisory level
-- Management control entities for force refresh, forecast/observation/warning
-  locations, and refresh timestamps
+- Management entities for force refresh, read-only forecast/observation/warning
+  location metadata, and refresh timestamps
 
 ### Data sources
 
 - Forecast and area definitions: JMA `bosai` JSON endpoints
 - Observation data: JMA AMeDAS JSON endpoints
 - Warning data: JMA XML warning feeds and warning XML documents
+
+### Forecast area and temperature coverage
+
+JMA forecast JSON does not always publish every data type at the same geographic
+granularity.
+
+- Short-term forecasts are usually published for the selected forecast area.
+- Weekly weather and precipitation probability may be published only for a
+  broader representative area. When the weekly weather series contains a single
+  representative area, this integration uses it for the selected forecast area.
+  For example, `190010` 中・西部 may receive weekly weather from `190000`
+  山梨県, and `474020` 与那国島地方 may receive weekly weather from `474000`
+  八重山地方.
+- Weekly temperatures are observation-station based. They are used only when JMA
+  publishes values for the selected observation station. The integration does
+  not substitute a different representative station, because that would display
+  another location's temperature as if it belonged to the selected location. For
+  example, if JMA publishes weekly temperatures for `94081` 石垣島 only, `94017`
+  与那国島 remains without weekly temperature values.
+
+The report datetime sensor exposes `daily_forecast_coverage` attributes showing
+which area supplied weather/precipitation and which station supplied
+temperature for each forecast date. The read-only management sensors also expose
+the weekly weather and temperature selection policies as attributes.
 
 ### Development
 

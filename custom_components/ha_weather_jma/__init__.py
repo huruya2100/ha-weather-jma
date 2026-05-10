@@ -18,7 +18,6 @@ PLATFORMS: tuple[Platform, ...] = (
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
     Platform.DATETIME,
-    Platform.TEXT,
 )
 
 
