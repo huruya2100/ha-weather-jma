@@ -177,6 +177,19 @@ class ApiClientTests(unittest.TestCase):
             client._warning_xml_urls[OFFICE_CODE], {"VPWW53": FRESH_URL_53}
         )
 
+    def test_warning_document_fetch_propagates_cancellation(self) -> None:
+        client = API.HaWeatherJmaApiClient(FakeSession({}))
+
+        async def fake_fetch_text(url: str) -> str:
+            del url
+            raise asyncio.CancelledError
+
+        with (
+            patch.object(client, "_async_fetch_text", new=fake_fetch_text),
+            self.assertRaises(asyncio.CancelledError),
+        ):
+            asyncio.run(client._async_fetch_warning_documents({"VPWW53": FRESH_URL_53}))
+
 
 if __name__ == "__main__":
     unittest.main()

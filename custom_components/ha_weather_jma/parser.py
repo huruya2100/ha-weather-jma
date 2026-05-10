@@ -925,6 +925,16 @@ def text_or_none(value: Any) -> str | None:
 
 
 def _should_replace_alert(existing: AlertItem, new_item: AlertItem) -> bool:
+    if existing.warning_code is None:
+        return True
+    if (
+        existing.report_datetime is not None
+        and new_item.report_datetime is not None
+        and new_item.report_datetime != existing.report_datetime
+    ):
+        return new_item.report_datetime > existing.report_datetime
+    if existing.report_datetime is None and new_item.report_datetime is not None:
+        return True
     return _alert_state_rank(new_item.is_active) >= _alert_state_rank(
         existing.is_active
     )

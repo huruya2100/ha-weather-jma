@@ -296,6 +296,47 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(summary.max_level, "none")
         self.assertEqual(summary.active_titles, ())
 
+    def test_parse_alerts_prefers_newer_status_for_same_warning(self) -> None:
+        old_active = """<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+  <Control><PublishingOffice>気象庁</PublishingOffice></Control>
+  <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+    <ReportDateTime>2026-05-29T01:10:00+09:00</ReportDateTime>
+  </Head>
+  <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/meteorology1/">
+    <Warning type="気象警報・注意報（市町村等）">
+      <Item>
+        <Kind><Name>濃霧注意報</Name><Code>20</Code><Status>発表</Status></Kind>
+        <Area><Name>千代田区</Name><Code>1310100</Code></Area>
+      </Item>
+    </Warning>
+  </Body>
+</Report>"""
+        new_cleared = """<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://xml.kishou.go.jp/jmaxml1/">
+  <Control><PublishingOffice>気象庁</PublishingOffice></Control>
+  <Head xmlns="http://xml.kishou.go.jp/jmaxml1/informationBasis1/">
+    <ReportDateTime>2026-05-29T01:20:00+09:00</ReportDateTime>
+  </Head>
+  <Body xmlns="http://xml.kishou.go.jp/jmaxml1/body/meteorology1/">
+    <Warning type="気象警報・注意報（市町村等）">
+      <Item>
+        <Kind><Name>濃霧注意報</Name><Code>20</Code><Status>解除</Status></Kind>
+        <Area><Name>千代田区</Name><Code>1310100</Code></Area>
+      </Item>
+    </Warning>
+  </Body>
+</Report>"""
+
+        alerts = PARSER.parse_alerts_xml(
+            [new_cleared, old_active],
+            "1310100",
+            "千代田区",
+        )
+
+        self.assertFalse(alerts[("fog", "advisory")].is_active)
+        self.assertEqual(alerts[("fog", "advisory")].status_text, "解除")
+
     def test_unknown_warning_code_is_ignored_with_warning_log(self) -> None:
         with self.assertLogs(
             "custom_components.ha_weather_jma.parser", level="WARNING"

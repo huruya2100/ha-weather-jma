@@ -136,7 +136,6 @@ class ConfigFlowTests(unittest.TestCase):
             [
                 "weather_forecast",
                 "warnings",
-                "management",
             ],
         )
 

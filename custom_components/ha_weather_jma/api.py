@@ -296,7 +296,9 @@ class HaWeatherJmaApiClient:
         documents: list[str] = []
         failed_product_ids: set[str] = set()
         for product_id, result in zip(product_ids, results, strict=False):
-            if isinstance(result, BaseException):
+            if isinstance(result, asyncio.CancelledError):
+                raise result
+            if isinstance(result, Exception):
                 failed_product_ids.add(product_id)
                 _LOGGER.warning(
                     "Warning XML fetch failed for %s: %s",
@@ -304,6 +306,8 @@ class HaWeatherJmaApiClient:
                     result,
                 )
                 continue
+            if isinstance(result, BaseException):
+                raise result
             documents.append(result)
 
         return documents, failed_product_ids
