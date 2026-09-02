@@ -103,7 +103,7 @@
           "none": "None",
           "advisory": "Advisory",
           "warning": "Warning",
-          "danger_warning": "Danger warning",
+          "danger_warning": "Urgent Warning",
           "emergency_warning": "Emergency warning"
         }
       },

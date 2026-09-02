@@ -624,6 +624,36 @@ class EntityTests(unittest.TestCase):
         self.assertIsNone(entity.is_on)
         self.assertIsNone(entity.extra_state_attributes["status_text"])
 
+    def test_binary_sensor_uses_jma_official_english_warning_title(self) -> None:
+        snapshot = build_snapshot(observation=None)
+        coordinator = build_coordinator(snapshot)
+        coordinator.hass = types.SimpleNamespace(
+            config=types.SimpleNamespace(language="en")
+        )
+        entity = BINARY_SENSOR.HaWeatherJmaWarningBinarySensor(
+            coordinator,
+            "heavy_rain",
+            "danger_warning",
+        )
+
+        self.assertEqual(
+            entity._attr_translation_placeholders["warning_name"],
+            "Level 4 Urgent Warning (Heavy rain)",
+        )
+
+    def test_alert_summary_uses_jma_official_english_warning_title(self) -> None:
+        snapshot = build_snapshot(observation=None)
+        coordinator = build_coordinator(snapshot)
+        coordinator.hass = types.SimpleNamespace(
+            config=types.SimpleNamespace(language="en")
+        )
+        description = next(
+            item for item in SENSOR.DESCRIPTIONS if item.key == "alert_summary"
+        )
+        entity = SENSOR.HaWeatherJmaSensorEntity(coordinator, description)
+
+        self.assertEqual(entity.native_value, "Level 2 Advisory (Dense fog)")
+
     def test_sensor_platform_skips_management_group_when_disabled(self) -> None:
         snapshot = build_snapshot(observation=None)
         location_data = {

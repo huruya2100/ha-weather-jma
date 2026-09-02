@@ -74,6 +74,13 @@ class ParserTests(unittest.TestCase):
         self.assertIn("43", const.WARNING_CODE_MAP)
         self.assertIn("48", const.WARNING_CODE_MAP)
         self.assertIn("49", const.WARNING_CODE_MAP)
+        self.assertEqual(
+            const.WARNING_LEVEL_LABELS_EN["danger_warning"], "Urgent Warning"
+        )
+        self.assertEqual(
+            PARSER.warning_entity_title_en("heavy_rain", "danger_warning"),
+            "Level 4 Urgent Warning (Heavy rain)",
+        )
 
     def test_build_candidates_from_minimal_definitions(self) -> None:
         area_data = read_fixture("area_minimal.json")

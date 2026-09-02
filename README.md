@@ -19,7 +19,7 @@ Meteorological Agency.
 - Weather entity backed by JMA forecast and AMeDAS observation data
 - Sensors for forecast area, observation station, report time, publishing office,
   precipitation probability, and warning summary
-- Binary sensors for advisories, warnings, danger warnings, and emergency warnings
+- Binary sensors for advisories, warnings, urgent warnings, and emergency warnings
 - Config flow support from the Home Assistant UI
 
 ### Installation

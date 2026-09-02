@@ -132,6 +132,12 @@ WARNING_LEVEL_LABELS: Final[dict[str, str]] = {
     LEVEL_DANGER_WARNING: "危険警報",
     LEVEL_EMERGENCY_WARNING: "特別警報",
 }
+WARNING_LEVEL_LABELS_EN: Final[dict[str, str]] = {
+    LEVEL_ADVISORY: "Advisory",
+    LEVEL_WARNING: "Warning",
+    LEVEL_DANGER_WARNING: "Urgent Warning",
+    LEVEL_EMERGENCY_WARNING: "Emergency Warning",
+}
 
 ENTITY_GROUP_WEATHER_FORECAST: Final = "weather_forecast"
 ENTITY_GROUP_WARNINGS: Final = "warnings"
@@ -220,6 +226,40 @@ WARNING_ENTITY_TITLES: Final[dict[tuple[str, str], str]] = {
     ("frost", LEVEL_ADVISORY): "レベル２霜注意報",
     ("icing", LEVEL_ADVISORY): "レベル２着氷注意報",
     ("snow_accretion", LEVEL_ADVISORY): "レベル２着雪注意報",
+}
+
+_WARNING_TYPE_NAMES_EN: Final[dict[str, str]] = {
+    "blizzard": "Blizzard",
+    "heavy_rain": "Heavy rain",
+    "flood": "Flood",
+    "landslide": "Landslide",
+    "storm": "Storm",
+    "heavy_snow": "Heavy snow",
+    "high_wave": "High waves",
+    "storm_surge": "Storm surge",
+    "thunder": "Thunder storm",
+    "thaw": "Thaw",
+    "fog": "Dense fog",
+    "dry": "Dry weather",
+    "avalanche": "Avalanche",
+    "low_temp": "Low temperature",
+    "frost": "Frost",
+    "icing": "Icing",
+    "snow_accretion": "Snow accretion",
+}
+_WARNING_LEVEL_NUMBERS: Final[dict[str, int]] = {
+    LEVEL_ADVISORY: 2,
+    LEVEL_WARNING: 3,
+    LEVEL_DANGER_WARNING: 4,
+    LEVEL_EMERGENCY_WARNING: 5,
+}
+
+WARNING_ENTITY_TITLES_EN: Final[dict[tuple[str, str], str]] = {
+    (warning_type, level): (
+        f"Level {_WARNING_LEVEL_NUMBERS[level]} {WARNING_LEVEL_LABELS_EN[level]} "
+        f"({_WARNING_TYPE_NAMES_EN[warning_type]})"
+    )
+    for warning_type, level in WARNING_ENTITY_TITLES
 }
 
 _WARNING_CODE_TYPES: Final[dict[str, tuple[str, str]]] = {

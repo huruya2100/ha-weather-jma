@@ -47,6 +47,7 @@ from .const import (
     UNKNOWN_WEATHER_CONDITION,
     WARNING_CODE_MAP,
     WARNING_ENTITY_TITLES,
+    WARNING_ENTITY_TITLES_EN,
     WARNING_LEVELS,
 )
 
@@ -944,6 +945,19 @@ def build_snapshot(
 def warning_entity_title(warning_type: str, level: str) -> str:
     """警報種別と警戒レベルから entity 表示名を返します。"""
     return WARNING_ENTITY_TITLES[(warning_type, level)]
+
+
+def warning_entity_title_en(warning_type: str, level: str) -> str:
+    """警報種別と警戒レベルから気象庁公式英語の表示名を返します。"""
+    return WARNING_ENTITY_TITLES_EN[(warning_type, level)]
+
+
+def translate_warning_title_to_english(title: str) -> str:
+    """日本語の警報タイトルを対応する公式英語タイトルへ変換します。"""
+    titles = dict(
+        zip(WARNING_ENTITY_TITLES.values(), WARNING_ENTITY_TITLES_EN.values())
+    )
+    return titles.get(title, title)
 
 
 def map_condition_to_ha(condition_code: str | None, condition_text: str | None) -> str:

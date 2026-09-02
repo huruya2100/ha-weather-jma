@@ -16,7 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN, ENTITY_GROUP_WARNINGS, WARNING_ENTITY_TITLES
 from .coordinator import HaWeatherJmaCoordinator
 from .entity import HaWeatherJmaBaseEntity
-from .parser import warning_entity_title
+from .parser import warning_entity_title, warning_entity_title_en
 
 
 async def async_setup_entry(
@@ -61,8 +61,13 @@ class HaWeatherJmaWarningBinarySensor(HaWeatherJmaBaseEntity, BinarySensorEntity
         )
         self._warning_type = warning_type
         self._level = level
+        language = getattr(getattr(coordinator.hass, "config", None), "language", "")
         self._attr_translation_placeholders = {
-            "warning_name": warning_entity_title(warning_type, level),
+            "warning_name": (
+                warning_entity_title_en(warning_type, level)
+                if str(language).casefold().startswith("en")
+                else warning_entity_title(warning_type, level)
+            ),
         }
 
     @property

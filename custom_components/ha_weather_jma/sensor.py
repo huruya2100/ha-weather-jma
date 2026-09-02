@@ -35,7 +35,12 @@ from .const import (
 )
 from .coordinator import HaWeatherJmaCoordinator
 from .entity import HaWeatherJmaBaseEntity
-from .parser import CoordinatorSnapshot, ForecastDaily, first_two_forecast_days
+from .parser import (
+    CoordinatorSnapshot,
+    ForecastDaily,
+    first_two_forecast_days,
+    translate_warning_title_to_english,
+)
 
 StateReader = Callable[[CoordinatorSnapshot], Any]
 AttrReader = Callable[[CoordinatorSnapshot], dict[str, Any]]
@@ -87,12 +92,21 @@ def _tomorrow_attributes(snapshot: CoordinatorSnapshot) -> dict[str, Any]:
     return _target_date_attributes(_tomorrow(snapshot))
 
 
-def _alert_summary_value(snapshot: CoordinatorSnapshot) -> str | None:
+def _alert_summary_value(
+    snapshot: CoordinatorSnapshot,
+    *,
+    english: bool = False,
+) -> str | None:
     """発表中警報タイトルを読める文字列へ集約します。"""
     if snapshot.alert_summary.max_level is None:
         return None
     if not snapshot.alert_summary.active_titles:
         return "なし"
+    if english:
+        return " / ".join(
+            translate_warning_title_to_english(title)
+            for title in snapshot.alert_summary.active_titles
+        )
     return "、".join(snapshot.alert_summary.active_titles)
 
 
@@ -315,6 +329,14 @@ class HaWeatherJmaSensorEntity(HaWeatherJmaBaseEntity, SensorEntity):
     @property
     def native_value(self) -> Any:
         """スナップショットから sensor の状態値を計算します。"""
+        if self.entity_description.key == SENSOR_ALERT_SUMMARY:
+            language = getattr(
+                getattr(self.coordinator.hass, "config", None),
+                "language",
+                "",
+            )
+            if str(language).casefold().startswith("en"):
+                return _alert_summary_value(self.snapshot, english=True)
         return self.entity_description.value_fn(self.snapshot)
 
     @property
