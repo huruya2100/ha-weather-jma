@@ -28,6 +28,13 @@
           "forecast_area_code": "Forecast area"
         }
       },
+      "weekly_forecast": {
+        "title": "Confirm weekly forecast area",
+        "description": "JMA does not publish an individual weekly forecast for {selected_area}. The weekly forecast for {weekly_area} can be used instead. If disabled, only the short-term forecast will be shown, without any weekly weather, precipitation, or temperature data.",
+        "data": {
+          "weekly_forecast_enabled": "Use the weekly forecast for this area"
+        }
+      },
       "observation": {
         "title": "Select observation station",
         "data": {

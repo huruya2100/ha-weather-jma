@@ -256,12 +256,14 @@ def _install_homeassistant_stubs() -> None:
             step_id: str,
             data_schema: Any,
             errors: dict[str, str] | None = None,
+            description_placeholders: dict[str, str] | None = None,
         ) -> dict[str, Any]:
             return {
                 "type": "form",
                 "step_id": step_id,
                 "data_schema": data_schema,
                 "errors": errors or {},
+                "description_placeholders": description_placeholders or {},
             }
 
         def async_create_entry(

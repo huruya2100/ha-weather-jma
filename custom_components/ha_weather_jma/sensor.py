@@ -101,13 +101,13 @@ def _forecast_coverage_attributes(snapshot: CoordinatorSnapshot) -> dict[str, An
     return {
         "forecast_area_code": snapshot.location.forecast_area_code,
         "forecast_area_name": snapshot.location.forecast_area_name,
+        "prefecture_name": snapshot.location.prefecture_name,
         "observation_station_code": snapshot.location.observation_station_code,
         "observation_station_name": snapshot.location.observation_station_name,
-        "weekly_weather_area_policy": (
-            "If JMA publishes weekly weather and precipitation for a single "
-            "representative area instead of the selected forecast area, that "
-            "representative area is used."
-        ),
+        "weekly_forecast_enabled": snapshot.location.weekly_forecast_enabled,
+        "weekly_forecast_area_code": snapshot.location.weekly_forecast_area_code,
+        "weekly_forecast_area_name": snapshot.location.weekly_forecast_area_name,
+        "weekly_weather_area_policy": _weekly_weather_area_policy(snapshot),
         "weekly_temperature_station_policy": (
             "Weekly temperatures are used only when JMA publishes values for "
             "the selected observation station. Representative stations are not "
@@ -129,6 +129,24 @@ def _forecast_coverage_attributes(snapshot: CoordinatorSnapshot) -> dict[str, An
             for day in snapshot.forecast_days
         ],
     }
+
+
+def _weekly_weather_area_policy(snapshot: CoordinatorSnapshot) -> str:
+    """保存済み設定に対応する週間予報地点ポリシーを説明します。"""
+    location = snapshot.location
+    if location.weekly_forecast_enabled is False:
+        return "Weekly forecast weather, precipitation, and temperatures are disabled."
+    if location.weekly_forecast_enabled is True:
+        return (
+            "Weekly weather and precipitation use the explicitly confirmed "
+            f"area {location.weekly_forecast_area_name} "
+            f"({location.weekly_forecast_area_code})."
+        )
+    return (
+        "If JMA publishes weekly weather and precipitation for a single "
+        "representative area instead of the selected forecast area, that "
+        "representative area is used."
+    )
 
 
 DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
@@ -195,13 +213,17 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
         value_fn=lambda snapshot: snapshot.location.forecast_area_name,
         attrs_fn=lambda snapshot: {
             "area_code": snapshot.location.forecast_area_code,
+            "prefecture_name": snapshot.location.prefecture_name,
             "office_name": snapshot.location.forecast_office_name,
             "office_code": snapshot.location.forecast_office_code,
-            "weekly_weather_area_policy": (
-                "If JMA publishes weekly weather and precipitation for a single "
-                "representative area instead of this forecast area, that "
-                "representative area is used."
+            "weekly_forecast_enabled": snapshot.location.weekly_forecast_enabled,
+            "weekly_forecast_area_code": (
+                snapshot.location.weekly_forecast_area_code
             ),
+            "weekly_forecast_area_name": (
+                snapshot.location.weekly_forecast_area_name
+            ),
+            "weekly_weather_area_policy": _weekly_weather_area_policy(snapshot),
         },
     ),
     HaWeatherJmaSensorDescription(
@@ -227,6 +249,7 @@ DESCRIPTIONS: tuple[HaWeatherJmaSensorDescription, ...] = (
         value_fn=lambda snapshot: snapshot.location.warning_area_name,
         attrs_fn=lambda snapshot: {
             "area_code": snapshot.location.warning_area_code,
+            "prefecture_name": snapshot.location.prefecture_name,
             "office_code": snapshot.location.warning_office_code,
         },
     ),

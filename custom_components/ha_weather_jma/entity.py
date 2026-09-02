@@ -49,6 +49,7 @@ class HaWeatherJmaBaseEntity(CoordinatorEntity[HaWeatherJmaCoordinator]):
     def _base_location_attributes(self) -> dict[str, Any]:
         """多くの entity で共通表示する地域・観測所属性を組み立てます。"""
         return {
+            "prefecture_name": self.location.prefecture_name,
             "forecast_area_name": self.location.forecast_area_name,
             "forecast_area_code": self.location.forecast_area_code,
             "observation_station_name": self.location.observation_station_name,

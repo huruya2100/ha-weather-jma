@@ -25,10 +25,14 @@ from .const import (
     CONF_LONGITUDE,
     CONF_OBSERVATION_STATION_CODE,
     CONF_OBSERVATION_STATION_NAME,
+    CONF_PREFECTURE_NAME,
     CONF_UPDATE_INTERVAL_MINUTES,
     CONF_WARNING_AREA_CODE,
     CONF_WARNING_AREA_NAME,
     CONF_WARNING_OFFICE_CODE,
+    CONF_WEEKLY_FORECAST_AREA_CODE,
+    CONF_WEEKLY_FORECAST_AREA_NAME,
+    CONF_WEEKLY_FORECAST_ENABLED,
     DEFAULT_ENABLED_WARNING_LEVELS,
     DEFAULT_UPDATE_INTERVAL_MINUTES,
     ENTITY_GROUPS,
@@ -39,6 +43,7 @@ from .const import (
     LEVEL_DANGER_WARNING,
     LEVEL_EMERGENCY_WARNING,
     LEVEL_WARNING,
+    PREFECTURE_NAMES,
     UNKNOWN_WEATHER_CONDITION,
     WARNING_CODE_MAP,
     WARNING_ENTITY_TITLES,
@@ -119,10 +124,14 @@ class ForecastAreaCandidate:
     name: str
     office_code: str
     office_name: str
+    prefecture_name: str
 
     @property
     def display_label(self) -> str:
-        return f"{self.office_name} / {self.name} ({self.code})"
+        return (
+            f"{self.prefecture_name} / {self.office_name} / "
+            f"{self.name} ({self.code})"
+        )
 
 
 @dataclass(slots=True, frozen=True)
@@ -145,10 +154,14 @@ class WarningAreaCandidate:
     name: str
     office_code: str
     office_name: str
+    prefecture_name: str
 
     @property
     def display_label(self) -> str:
-        return f"{self.office_name} / {self.name} ({self.code})"
+        return (
+            f"{self.prefecture_name} / {self.office_name} / "
+            f"{self.name} ({self.code})"
+        )
 
 
 @dataclass(slots=True, frozen=True)
@@ -186,6 +199,10 @@ class LocationConfig:
     update_interval_minutes: int
     enabled_warning_levels: tuple[str, ...]
     enabled_entity_groups: tuple[str, ...]
+    prefecture_name: str = ""
+    weekly_forecast_enabled: bool | None = None
+    weekly_forecast_area_code: str | None = None
+    weekly_forecast_area_name: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -301,6 +318,7 @@ def build_forecast_area_candidates(
                 name=str(area.get("name") or child_code),
                 office_code=office_code,
                 office_name=office_name,
+                prefecture_name=prefecture_name_for_office(office_code),
             )
 
     return candidates
@@ -343,6 +361,7 @@ def build_warning_area_candidates(
             name=str(area.get("name") or code),
             office_code=office_code,
             office_name=office_name,
+            prefecture_name=prefecture_name_for_office(office_code),
         )
 
     return candidates
@@ -451,7 +470,34 @@ def build_location_config(
         or DEFAULT_UPDATE_INTERVAL_MINUTES,
         enabled_warning_levels=enabled_levels,
         enabled_entity_groups=enabled_entity_groups,
+        prefecture_name=str(
+            data.get(CONF_PREFECTURE_NAME)
+            or prefecture_name_for_office(str(data[CONF_FORECAST_OFFICE_CODE]))
+        ),
+        weekly_forecast_enabled=(
+            bool(data.get(CONF_WEEKLY_FORECAST_ENABLED))
+            if CONF_WEEKLY_FORECAST_ENABLED in data
+            else None
+        ),
+        weekly_forecast_area_code=text_or_none(
+            data.get(CONF_WEEKLY_FORECAST_AREA_CODE)
+        ),
+        weekly_forecast_area_name=text_or_none(
+            data.get(CONF_WEEKLY_FORECAST_AREA_NAME)
+        ),
     )
+
+
+def prefecture_name_for_office(office_code: str) -> str:
+    """府県予報区コードから都道府県名を返します。"""
+    return PREFECTURE_NAMES.get(str(office_code)[:2], str(office_code))
+
+
+def format_location_name(prefecture_name: str, area_name: str) -> str:
+    """Device の既定名を都道府県名と地域名から構築します。"""
+    if not prefecture_name or prefecture_name == area_name:
+        return area_name or prefecture_name
+    return f"{prefecture_name} {area_name}"
 
 
 def parse_observation(raw: Mapping[str, Any], latest_time: str) -> ObservationSnapshot:
@@ -483,6 +529,8 @@ def parse_forecast(
     raw: Sequence[Mapping[str, Any]],
     forecast_area_code: str,
     observation_station_code: str | None = None,
+    weekly_forecast_enabled: bool | None = None,
+    weekly_forecast_area_code: str | None = None,
 ) -> tuple[ForecastDaily, ...]:
     """気象庁予報 JSON を日別の `ForecastDaily` 一覧へ正規化します。
 
@@ -566,9 +614,16 @@ def parse_forecast(
                 bucket["temperature_station_name"] = _area_name(short_temp_area)
 
     weekly_weather_series = _find_time_series(weekly_block, {"weatherCodes", "pops"})
-    weekly_weather_area = _find_area_or_single_area(
-        weekly_weather_series, forecast_area_code
-    )
+    weekly_weather_area = None
+    if weekly_forecast_enabled is None:
+        weekly_weather_area = _find_area_or_single_area(
+            weekly_weather_series, forecast_area_code
+        )
+    elif weekly_forecast_enabled:
+        weekly_weather_area = _find_area(
+            weekly_weather_series,
+            weekly_forecast_area_code or forecast_area_code,
+        )
     if weekly_weather_series is not None and weekly_weather_area is not None:
         for defined_at, code, pop in zip(
             _iter_strings(weekly_weather_series.get("timeDefines")),
@@ -586,7 +641,11 @@ def parse_forecast(
             bucket.setdefault("weather_area_name", _area_name(weekly_weather_area))
 
     weekly_temp_series = _find_time_series(weekly_block, {"tempsMin", "tempsMax"})
-    weekly_temp_area = _find_area(weekly_temp_series, observation_station_code)
+    weekly_temp_area = (
+        _find_area(weekly_temp_series, observation_station_code)
+        if weekly_forecast_enabled is not False
+        else None
+    )
     if weekly_temp_series is not None and weekly_temp_area is not None:
         for defined_at, temp_min, temp_max in zip(
             _iter_strings(weekly_temp_series.get("timeDefines")),
@@ -633,6 +692,24 @@ def parse_forecast(
             f"Forecast data for area {forecast_area_code} is empty"
         )
     return forecasts
+
+
+def resolve_weekly_forecast_area(
+    raw: Sequence[Mapping[str, Any]],
+    forecast_area_code: str,
+) -> tuple[str, str] | None:
+    """選択地域に対して気象庁が配信する週間天気予報地点を返します。"""
+    weekly_block = _mapping(raw[1]) if len(raw) > 1 else {}
+    weekly_weather_series = _find_time_series(weekly_block, {"weatherCodes", "pops"})
+    weekly_weather_area = _find_area_or_single_area(
+        weekly_weather_series,
+        forecast_area_code,
+    )
+    code = _area_code(weekly_weather_area)
+    name = _area_name(weekly_weather_area)
+    if code is None or name is None:
+        return None
+    return code, name
 
 
 def forecast_supports_observation_station(

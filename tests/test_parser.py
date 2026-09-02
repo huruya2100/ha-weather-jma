@@ -87,7 +87,9 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(region_candidates["010300"].name, "関東甲信")
         self.assertEqual(forecast_candidates["130010"].office_code, "130000")
         self.assertEqual(forecast_candidates["130010"].office_name, "気象庁")
+        self.assertEqual(forecast_candidates["130010"].prefecture_name, "東京都")
         self.assertEqual(warning_candidates["1310100"].office_code, "130000")
+        self.assertEqual(warning_candidates["1310100"].prefecture_name, "東京都")
         self.assertEqual(station_candidates["44132"].name, "東京")
         self.assertAlmostEqual(
             station_candidates["44132"].latitude, 35.6916666667, places=6
@@ -250,6 +252,59 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(forecast_days[2].weather_area_code, "190000")
         self.assertEqual(forecast_days[2].weather_area_name, "山梨県")
         self.assertEqual(forecast_days[2].temperature_station_code, "44132")
+
+    def test_resolve_and_explicitly_use_representative_weekly_area(self) -> None:
+        forecast_data = read_fixture("forecast_normal.json")
+        forecast_data[0]["timeSeries"][0]["areas"][0]["area"] = {
+            "name": "中・西部",
+            "code": "190010",
+        }
+        forecast_data[0]["timeSeries"][1]["areas"][0]["area"] = {
+            "name": "中・西部",
+            "code": "190010",
+        }
+        forecast_data[1]["timeSeries"][0]["areas"][0]["area"] = {
+            "name": "山梨県",
+            "code": "190000",
+        }
+
+        self.assertEqual(
+            PARSER.resolve_weekly_forecast_area(forecast_data, "190010"),
+            ("190000", "山梨県"),
+        )
+        forecast_days = PARSER.parse_forecast(
+            forecast_data,
+            "190010",
+            "44132",
+            True,
+            "190000",
+        )
+        self.assertEqual(forecast_days[2].weather_area_code, "190000")
+
+    def test_parse_forecast_can_exclude_all_weekly_series(self) -> None:
+        forecast_days = PARSER.parse_forecast(
+            read_fixture("forecast_normal.json"),
+            "130010",
+            "44132",
+            False,
+            "130010",
+        )
+
+        self.assertEqual(len(forecast_days), 2)
+        self.assertEqual(forecast_days[-1].target_date.isoformat(), "2026-04-15")
+        self.assertNotEqual(forecast_days[-1].temp_min_c, 12.0)
+
+    def test_prefecture_name_uses_office_code_including_hokkaido(self) -> None:
+        self.assertEqual(PARSER.prefecture_name_for_office("120000"), "千葉県")
+        self.assertEqual(PARSER.prefecture_name_for_office("012000"), "北海道")
+        self.assertEqual(
+            PARSER.format_location_name("北海道", "北部"),
+            "北海道 北部",
+        )
+        self.assertEqual(
+            PARSER.format_location_name("徳島県", "徳島県"),
+            "徳島県",
+        )
 
     def test_parse_forecast_does_not_guess_weekly_temperature_station(
         self,

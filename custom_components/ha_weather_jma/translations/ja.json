@@ -28,6 +28,13 @@
           "forecast_area_code": "予報地域"
         }
       },
+      "weekly_forecast": {
+        "title": "週間天気予報の地域を確認",
+        "description": "{selected_area} 個別の週間天気予報は発表されていません。代わりに {weekly_area} の週間天気予報を使用できます。使用しない場合は、週間の天気・降水確率・気温を含めず、短期予報だけを表示します。",
+        "data": {
+          "weekly_forecast_enabled": "この地域の週間天気予報を使用する"
+        }
+      },
       "observation": {
         "title": "観測所を選択",
         "data": {

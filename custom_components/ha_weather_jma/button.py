@@ -56,10 +56,14 @@ class HaWeatherJmaForceRefreshButtonEntity(HaWeatherJmaBaseEntity, ButtonEntity)
     def extra_state_attributes(self) -> dict[str, Any]:
         """設定値と最終更新時刻を管理用属性として返します。"""
         return {
+            "prefecture_name": self.location.prefecture_name,
             "forecast_area_name": self.location.forecast_area_name,
             "forecast_area_code": self.location.forecast_area_code,
             "forecast_office_name": self.location.forecast_office_name,
             "forecast_office_code": self.location.forecast_office_code,
+            "weekly_forecast_enabled": self.location.weekly_forecast_enabled,
+            "weekly_forecast_area_name": self.location.weekly_forecast_area_name,
+            "weekly_forecast_area_code": self.location.weekly_forecast_area_code,
             "observation_station_name": self.location.observation_station_name,
             "observation_station_code": self.location.observation_station_code,
             "warning_area_name": self.location.warning_area_name,

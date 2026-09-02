@@ -143,6 +143,8 @@ class HaWeatherJmaCoordinator(DataUpdateCoordinator[CoordinatorSnapshot]):
                     raw_forecast,
                     self.location.forecast_area_code,
                     self.location.observation_station_code,
+                    self.location.weekly_forecast_enabled,
+                    self.location.weekly_forecast_area_code,
                 )
                 forecast_meta = parse_forecast_metadata(raw_forecast)
             except ForecastAreaNotFoundError as err:

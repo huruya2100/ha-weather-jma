@@ -85,8 +85,10 @@ granularity.
 
 - Short-term forecasts are usually published for the selected forecast area.
 - Weekly weather and precipitation probability may be published only for a
-  broader representative area. When the weekly weather series contains a single
-  representative area, this integration uses it for the selected forecast area.
+  broader representative area. During new setup, the integration shows the
+  representative area and asks whether its weekly forecast should be used.
+  Declining keeps the short-term forecast and excludes all weekly weather,
+  precipitation, and temperature data.
   For example, `190010` 中・西部 may receive weekly weather from `190000`
   山梨県, and `474020` 与那国島地方 may receive weekly weather from `474000`
   八重山地方.
@@ -101,6 +103,11 @@ The report datetime sensor exposes `daily_forecast_coverage` attributes showing
 which area supplied weather/precipitation and which station supplied
 temperature for each forecast date. The read-only management sensors also expose
 the weekly weather and temperature selection policies as attributes.
+
+Forecast and warning choices include the prefecture as well as the publishing
+office. The default device name also combines the prefecture and forecast area,
+for example `北海道 北部`; it remains editable during setup. Existing device
+names are not renamed automatically.
 
 ### Development
 

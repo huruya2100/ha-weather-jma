@@ -29,10 +29,14 @@ from .const import (
     CONF_NAME,
     CONF_OBSERVATION_STATION_CODE,
     CONF_OBSERVATION_STATION_NAME,
+    CONF_PREFECTURE_NAME,
     CONF_UPDATE_INTERVAL_MINUTES,
     CONF_WARNING_AREA_CODE,
     CONF_WARNING_AREA_NAME,
     CONF_WARNING_OFFICE_CODE,
+    CONF_WEEKLY_FORECAST_AREA_CODE,
+    CONF_WEEKLY_FORECAST_AREA_NAME,
+    CONF_WEEKLY_FORECAST_ENABLED,
     DEFAULT_ENABLED_ENTITY_GROUPS,
     DEFAULT_ENABLED_WARNING_LEVELS,
     DEFAULT_UPDATE_INTERVAL_MINUTES,
@@ -55,6 +59,8 @@ from .parser import (
     build_region_candidates,
     build_warning_area_candidates,
     extract_forecast_observation_station_codes,
+    format_location_name,
+    resolve_weekly_forecast_area,
 )
 
 CandidateMap = Mapping[
@@ -142,6 +148,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._station_candidates: dict[str, ObservationStationCandidate] = {}
         self._observation_candidates: dict[str, ObservationStationCandidate] = {}
         self._warning_candidates: dict[str, WarningAreaCandidate] = {}
+        self._forecast_data: list[dict[str, Any]] | None = None
         self._candidate_filters: dict[str, str] = {}
         self._entry_data: ConfigFlowInput = {}
 
@@ -198,6 +205,7 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "invalid_selection"
                 else:
                     self._observation_candidates = {}
+                    self._forecast_data = None
                     self._candidate_filters.pop(CONF_OBSERVATION_STATION_CODE, None)
                     self._entry_data.update(
                         {
@@ -205,9 +213,34 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_FORECAST_AREA_NAME: candidate.name,
                             CONF_FORECAST_OFFICE_CODE: candidate.office_code,
                             CONF_FORECAST_OFFICE_NAME: candidate.office_name,
+                            CONF_PREFECTURE_NAME: candidate.prefecture_name,
                         }
                     )
-                    return await self.async_step_observation()
+                    try:
+                        forecast_data = (
+                            await self._async_fetch_forecast_for_validation()
+                        )
+                    except CONNECTIVITY_ERRORS:
+                        errors["base"] = "cannot_connect"
+                    else:
+                        weekly_area = resolve_weekly_forecast_area(
+                            forecast_data,
+                            candidate.code,
+                        )
+                        weekly_code, weekly_name = weekly_area or (
+                            candidate.code,
+                            candidate.name,
+                        )
+                        self._entry_data.update(
+                            {
+                                CONF_WEEKLY_FORECAST_AREA_CODE: weekly_code,
+                                CONF_WEEKLY_FORECAST_AREA_NAME: weekly_name,
+                            }
+                        )
+                        if weekly_code != candidate.code:
+                            return await self.async_step_weekly_forecast()
+                        self._entry_data[CONF_WEEKLY_FORECAST_ENABLED] = True
+                        return await self.async_step_observation()
 
         data_schema, filter_error = self._build_candidate_schema(
             CONF_FORECAST_AREA_CODE,
@@ -220,6 +253,40 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="forecast_area",
             data_schema=data_schema,
             errors=errors,
+        )
+
+    async def async_step_weekly_forecast(
+        self,
+        user_input: ConfigFlowInput | None = None,
+    ):
+        """異なる代表地点の週間予報を利用するか確認します。"""
+        if user_input is not None:
+            self._entry_data[CONF_WEEKLY_FORECAST_ENABLED] = bool(
+                user_input[CONF_WEEKLY_FORECAST_ENABLED]
+            )
+            return await self.async_step_observation()
+
+        prefecture_name = str(self._entry_data[CONF_PREFECTURE_NAME])
+        return self.async_show_form(
+            step_id="weekly_forecast",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_WEEKLY_FORECAST_ENABLED,
+                        default=True,
+                    ): bool,
+                }
+            ),
+            description_placeholders={
+                "selected_area": format_location_name(
+                    prefecture_name,
+                    str(self._entry_data[CONF_FORECAST_AREA_NAME]),
+                ),
+                "weekly_area": format_location_name(
+                    prefecture_name,
+                    str(self._entry_data[CONF_WEEKLY_FORECAST_AREA_NAME]),
+                ),
+            },
         )
 
     async def async_step_observation(
@@ -305,7 +372,10 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_options(self, user_input: ConfigFlowInput | None = None):
         """表示名、更新間隔、生成する entity グループを確定して entry を作ります。"""
         errors: dict[str, str] = {}
-        default_name = self._entry_data.get(CONF_FORECAST_AREA_NAME, DOMAIN)
+        default_name = format_location_name(
+            str(self._entry_data.get(CONF_PREFECTURE_NAME, "")),
+            str(self._entry_data.get(CONF_FORECAST_AREA_NAME, DOMAIN)),
+        )
 
         if user_input is not None:
             data, errors = self._normalize_final_form_input(user_input)
@@ -478,9 +548,11 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _async_fetch_forecast_for_validation(self) -> list[dict[str, Any]]:
         """観測所候補の絞り込みに使う予報 JSON を取得します。"""
-        return await self._get_api_client().fetch_forecast(
-            self._entry_data[CONF_FORECAST_OFFICE_CODE]
-        )
+        if self._forecast_data is None:
+            self._forecast_data = await self._get_api_client().fetch_forecast(
+                self._entry_data[CONF_FORECAST_OFFICE_CODE]
+            )
+        return self._forecast_data
 
     def _show_connect_error(self, step_id: str):
         """通信・解析失敗時に現在ステップへ接続エラーを表示します。"""
@@ -557,7 +629,13 @@ class HaWeatherJmaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """候補検索に使う正規化済み文字列を作ります。"""
         parts = [candidate.display_label, candidate.code, candidate.name]
         if isinstance(candidate, ForecastAreaCandidate | WarningAreaCandidate):
-            parts.extend((candidate.office_code, candidate.office_name))
+            parts.extend(
+                (
+                    candidate.office_code,
+                    candidate.office_name,
+                    candidate.prefecture_name,
+                )
+            )
         return self._normalize_search_text(" ".join(parts))
 
     def _forecast_belongs_to_region(

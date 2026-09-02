@@ -105,6 +105,60 @@ class ConfigFlowTests(unittest.TestCase):
             result["data"]["enabled_entity_groups"],
             ["weather_forecast", "warnings"],
         )
+        self.assertEqual(result["data"]["prefecture_name"], "東京都")
+        self.assertTrue(result["data"]["weekly_forecast_enabled"])
+        self.assertEqual(result["data"]["weekly_forecast_area_code"], "130010")
+
+    def test_config_flow_confirms_different_weekly_forecast_area(self) -> None:
+        forecast_data = read_fixture("forecast_normal.json")
+        forecast_data[1]["timeSeries"][0]["areas"][0]["area"] = {
+            "name": "東京都",
+            "code": "130000",
+        }
+        self.flow._api_client = FakeApiClient(
+            area_data=read_fixture("area_minimal.json"),
+            station_data=read_fixture("amedastable_minimal.json"),
+            forecast_data=forecast_data,
+        )
+        asyncio.run(self.flow.async_step_user({"region_code": "010300"}))
+
+        result = asyncio.run(
+            self.flow.async_step_forecast_area({"forecast_area_code": "130010"})
+        )
+
+        self.assertEqual(result["step_id"], "weekly_forecast")
+        self.assertEqual(
+            result["description_placeholders"],
+            {
+                "selected_area": "東京都 東京地方",
+                "weekly_area": "東京都",
+            },
+        )
+        self.assertTrue(
+            self._schema_default(result["data_schema"], "weekly_forecast_enabled")
+        )
+
+        result = asyncio.run(
+            self.flow.async_step_weekly_forecast({"weekly_forecast_enabled": False})
+        )
+        self.assertEqual(result["step_id"], "observation")
+        self.assertFalse(self.flow._entry_data["weekly_forecast_enabled"])
+        self.assertEqual(self.flow._entry_data["weekly_forecast_area_code"], "130000")
+
+    def test_default_device_name_includes_prefecture_without_duplication(self) -> None:
+        self.flow._entry_data = {
+            "prefecture_name": "北海道",
+            "forecast_area_name": "北部",
+        }
+        result = asyncio.run(self.flow.async_step_options())
+        self.assertEqual(
+            self._schema_default(result["data_schema"], "name"),
+            "北海道 北部",
+        )
+
+        self.flow._entry_data["forecast_area_name"] = "北海道"
+        result = asyncio.run(self.flow.async_step_options())
+        self.assertEqual(self._schema_default(result["data_schema"], "name"), "北海道")
 
     def test_options_step_includes_entity_group_selection(self) -> None:
         self.flow._entry_data = {
@@ -369,6 +423,10 @@ class ConfigFlowTests(unittest.TestCase):
         options = self._schema_options(result["data_schema"], "forecast_area_code")
         self.assertIn("130010", options)
         self.assertNotIn("360010", options)
+        self.assertEqual(
+            options["130010"],
+            "東京都 / 気象庁 / 東京地方 (130010)",
+        )
 
     def test_warning_step_is_filtered_by_selected_forecast_office(self) -> None:
         remote_class20s = {
