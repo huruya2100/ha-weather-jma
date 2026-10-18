@@ -213,6 +213,22 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(forecast_days[2].temp_max_c, 23.0)
         self.assertEqual(forecast_days[2].precip_probability_percent, 50)
 
+    def test_parse_forecast_reads_temperature_pairs_for_each_day(self) -> None:
+        forecast_data = read_fixture("forecast_normal.json")
+        temperatures = forecast_data[0]["timeSeries"][2]
+        temperatures["timeDefines"][:0] = [
+            "2026-04-14T09:00:00+09:00",
+            "2026-04-14T00:00:00+09:00",
+        ]
+        temperatures["areas"][0]["temps"][:0] = ["28", "28"]
+
+        forecast_days = PARSER.parse_forecast(forecast_data, "130010", "44132")
+
+        self.assertEqual(forecast_days[0].temp_min_c, 28.0)
+        self.assertEqual(forecast_days[0].temp_max_c, 28.0)
+        self.assertEqual(forecast_days[1].temp_min_c, 14.0)
+        self.assertEqual(forecast_days[1].temp_max_c, 21.0)
+
     def test_parse_forecast_tolerates_missing_wind_text(self) -> None:
         forecast_data = read_fixture("forecast_normal.json")
         forecast_data[0]["timeSeries"][0]["areas"][0].pop("winds", None)

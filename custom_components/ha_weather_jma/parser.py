@@ -603,14 +603,16 @@ def parse_forecast(
             _coerce_float(value)
             for value in _iter_strings(short_temp_area.get("temps"))
         ]
-        if dates and dates[0] is not None:
-            bucket = by_date[dates[0].date()]
-            if temps:
-                bucket["temp_min_c"] = temps[0]
+        for i in range(0, len(dates), 2):
+            if dates[i] is None:
+                continue
+            bucket = by_date[dates[i].date()]
+            if len(temps) > i:
+                bucket["temp_min_c"] = temps[i]
                 bucket["temperature_station_code"] = _area_code(short_temp_area)
                 bucket["temperature_station_name"] = _area_name(short_temp_area)
-            if len(temps) > 1:
-                bucket["temp_max_c"] = temps[1]
+            if len(temps) > i + 1:
+                bucket["temp_max_c"] = temps[i + 1]
                 bucket["temperature_station_code"] = _area_code(short_temp_area)
                 bucket["temperature_station_name"] = _area_name(short_temp_area)
 
